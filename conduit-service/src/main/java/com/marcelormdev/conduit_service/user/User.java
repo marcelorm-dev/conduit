@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -11,7 +12,7 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 class User {
 
-    private @Id @GeneratedValue Long id;
+    private @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long id;
     private String username;
     private String email;
     private String password;
