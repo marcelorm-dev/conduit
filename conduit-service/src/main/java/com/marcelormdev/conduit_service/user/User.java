@@ -62,7 +62,7 @@ class User {
     }
 
     void setBio(String bio) {
-        this.bio = bio;
+        this.bio = bio == null || bio.isBlank() ? null : bio;
     }
 
     String getImage() {
@@ -70,7 +70,7 @@ class User {
     }
 
     void setImage(String image) {
-        this.image = image;
+        this.image = image == null || image.isBlank() ? null : image;
     }
 
     String getToken() {
@@ -81,7 +81,8 @@ class User {
         this.token = token;
     }
 
-    void update(String username, String email, String password, String bio, String image, String token) {
+    void update(String username, String email, String password, boolean hasBio, String bio, boolean hasImage,
+            String image, String token) {
         if (username != null)
             this.setUsername(username);
 
@@ -91,10 +92,10 @@ class User {
         if (password != null)
             this.setPassword(password);
 
-        if (bio != null)
+        if (hasBio)
             this.setBio(bio);
 
-        if (image != null)
+        if (hasImage)
             this.setImage(image);
 
         if (token != null)

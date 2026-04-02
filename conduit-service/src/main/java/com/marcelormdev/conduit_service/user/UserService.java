@@ -112,7 +112,9 @@ public class UserService {
                 userDTO.username(),
                 userDTO.email(),
                 userDTO.password(),
+                userDTO.hasBio(),
                 userDTO.bio(),
+                userDTO.hasImage(),
                 userDTO.image(),
                 newToken);
 

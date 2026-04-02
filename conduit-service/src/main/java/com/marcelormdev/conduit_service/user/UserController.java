@@ -1,6 +1,7 @@
 package com.marcelormdev.conduit_service.user;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,16 +27,6 @@ public class UserController {
     this.userService = userService;
   }
 
-  private record BodyRequest(UserRequest user) {
-
-    private record UserRequest(String email, String username, String bio, String image, String token, String password) {
-      UserDTO toDTO() {
-        return new UserDTO(email, password, username, bio, image, token);
-      }
-    }
-
-  }
-
   private record BodyResponse(UserResponse user) {
 
     private record UserResponse(String email, String username, String bio, String image, String token) {
@@ -57,33 +48,33 @@ public class UserController {
   @GetMapping("/api/user")
   public BodyResponse currentUser(@RequestHeader HttpHeaders headers) {
     String token = new JwtAuthorizationHeader(headers).getToken();
-    UserDTO user = userService.currentUser(token);
+    UserDTO currentUser = userService.currentUser(token);
 
-    return BodyResponse.of(user);
+    return BodyResponse.of(currentUser);
   }
 
   @PostMapping("/api/users/login")
-  public BodyResponse authenticate(@RequestBody BodyRequest body) {
-    UserDTO dto = body.user.toDTO();
-    UserDTO user = userService.login(dto.email(), dto.password());
+  public BodyResponse authenticate(@RequestBody Map<String, Map<String, String>> body) {
+    UserDTO requestUser = new UserDTO(body.get("user"));
+    UserDTO loggedUser = userService.login(requestUser.email(), requestUser.password());
 
-    return BodyResponse.of(user);
+    return BodyResponse.of(loggedUser);
   }
 
   @PostMapping("/api/users")
   @ResponseStatus(HttpStatus.CREATED)
-  public BodyResponse register(@RequestBody BodyRequest body) {
-    UserDTO user = userService.register(body.user.toDTO());
+  public BodyResponse register(@RequestBody Map<String, Map<String, String>> body) {
+    UserDTO registeredUser = userService.register(new UserDTO(body.get("user")));
 
-    return BodyResponse.of(user);
+    return BodyResponse.of(registeredUser);
   }
 
   @PutMapping("/api/user")
-  public BodyResponse update(@RequestHeader HttpHeaders headers, @RequestBody BodyRequest body) {
+  public BodyResponse update(@RequestHeader HttpHeaders headers, @RequestBody Map<String, Map<String, String>> body) {
     String token = new JwtAuthorizationHeader(headers).getToken();
-    UserDTO user = userService.update(token, body.user.toDTO());
+    UserDTO updatedUser = userService.update(token, new UserDTO(body.get("user")));
 
-    return BodyResponse.of(user);
+    return BodyResponse.of(updatedUser);
   }
 
   @GetMapping("/api/users")
@@ -93,8 +84,8 @@ public class UserController {
   }
 
   @PutMapping("/api/token")
-  public BodyResponse renewToken(@RequestBody BodyRequest body) {
-    UserDTO user = userService.renewToken(body.user.email);
+  public BodyResponse renewToken(@RequestBody Map<String, Map<String, String>> body) {
+    UserDTO user = userService.renewToken(body.get("user").get("email"));
 
     return BodyResponse.of(user);
   }
