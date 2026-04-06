@@ -39,4 +39,20 @@ class RestCaller {
                 .exchange();
     }
 
+    public RestTestClient.ResponseSpec getAnonymous(String uri) {
+        return client.get().uri(uri).exchange();
+    }
+
+    public RestTestClient.ResponseSpec postWithToken(String uri, String jwtToken) {
+        return client.post().uri(uri)
+                .header("Authorization", "Token " + jwtToken)
+                .exchange();
+    }
+
+    public RestTestClient.ResponseSpec delete(String uri, String jwtToken) {
+        return client.delete().uri(uri)
+                .header("Authorization", "Token " + jwtToken)
+                .exchange();
+    }
+
 }

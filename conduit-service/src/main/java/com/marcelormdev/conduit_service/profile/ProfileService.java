@@ -1,0 +1,71 @@
+package com.marcelormdev.conduit_service.profile;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
+import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.security.JwtTokenService;
+import com.marcelormdev.conduit_service.user.UserDTO;
+import com.marcelormdev.conduit_service.user.UserService;
+
+@Service
+public class ProfileService {
+
+    private final ProfileRepository profileRepository;
+    private final UserService userService;
+    private final JwtTokenService jwtTokenService;
+
+    ProfileService(ProfileRepository profileRepository, UserService userService, JwtTokenService jwtTokenService) {
+        this.profileRepository = profileRepository;
+        this.userService = userService;
+        this.jwtTokenService = jwtTokenService;
+    }
+
+    private Profile getAuthenticatedProfile(String token) {
+        UserDTO userDTO = userService.currentUser(token);
+        return profileRepository.findByUserEmail(userDTO.email()).get();
+    }
+
+    private Profile findByUsername(String username) {
+        return profileRepository.findByUserUsername(username)
+                .orElseThrow(() -> new FieldValidationException(ErrorMessages.USERNAME_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileDTO getProfile(String username, String token) {
+        Profile targetProfile = findByUsername(username);
+
+        boolean following = token == null || !jwtTokenService.isTokenValid(token) ? false
+                : getAuthenticatedProfile(token).isFollowing(targetProfile);
+
+        return ProfileDTO.of(targetProfile, following);
+    }
+
+    @Transactional
+    public ProfileDTO follow(String username, String token) {
+        Profile currentUserProfile = getAuthenticatedProfile(token);
+        Profile targetProfile = findByUsername(username);
+
+        currentUserProfile.follow(targetProfile);
+        profileRepository.save(currentUserProfile);
+
+        boolean following = currentUserProfile.isFollowing(targetProfile);
+
+        return ProfileDTO.of(targetProfile, following);
+    }
+
+    @Transactional
+    public ProfileDTO unfollow(String username, String token) {
+        Profile currentUserProfile = getAuthenticatedProfile(token);
+        Profile targetProfile = findByUsername(username);
+
+        currentUserProfile.unfollow(targetProfile);
+        profileRepository.save(currentUserProfile);
+
+        boolean following = currentUserProfile.isFollowing(targetProfile);
+
+        return ProfileDTO.of(targetProfile, following);
+    }
+
+}

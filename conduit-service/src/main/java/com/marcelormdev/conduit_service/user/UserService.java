@@ -6,20 +6,24 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.common.validation.Validator;
-import com.marcelormdev.conduit_service.security.JwtTokenService;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
+import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.common.validation.Validator;
+import com.marcelormdev.conduit_service.profile.Profile;
+import com.marcelormdev.conduit_service.profile.ProfileRepository;
+import com.marcelormdev.conduit_service.security.JwtTokenService;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
     private final JwtTokenService jwtTokenService;
 
-    UserService(UserRepository userRepository, JwtTokenService jwtTokenService) {
+    UserService(UserRepository userRepository, ProfileRepository profileRepository, JwtTokenService jwtTokenService) {
         this.userRepository = userRepository;
+        this.profileRepository = profileRepository;
         this.jwtTokenService = jwtTokenService;
     }
 
@@ -86,6 +90,7 @@ public class UserService {
                 token);
 
         user = userRepository.save(user);
+        profileRepository.save(new Profile(user));
 
         return new UserDTO(user);
     }

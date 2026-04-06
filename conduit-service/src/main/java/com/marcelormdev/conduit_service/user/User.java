@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
-class User {
+public class User {
 
     private @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long id;
     private String username;
@@ -33,7 +33,7 @@ class User {
         this.setToken(token);
     }
 
-    String getEmail() {
+    public String getEmail() {
         return email;
     }
 
@@ -49,7 +49,7 @@ class User {
         this.password = password;
     }
 
-    String getUsername() {
+    public String getUsername() {
         return username;
     }
 
@@ -57,7 +57,7 @@ class User {
         this.username = username;
     }
 
-    String getBio() {
+    public String getBio() {
         return bio;
     }
 
@@ -65,7 +65,7 @@ class User {
         this.bio = bio == null || bio.isBlank() ? null : bio;
     }
 
-    String getImage() {
+    public String getImage() {
         return image;
     }
 

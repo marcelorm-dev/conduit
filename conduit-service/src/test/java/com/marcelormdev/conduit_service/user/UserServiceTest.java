@@ -18,6 +18,7 @@ import com.marcelormdev.conduit_service.common.exception.AuthenticationException
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
 import com.marcelormdev.conduit_service.commons.JsonToMapConverter;
+import com.marcelormdev.conduit_service.profile.ProfileRepository;
 import com.marcelormdev.conduit_service.security.JwtTokenService;
 
 @SpringBootTest
@@ -32,8 +33,12 @@ class UserServiceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ProfileRepository profileRepository;
+
     @BeforeEach
     void beforeEachTest() {
+        profileRepository.deleteAll();
         userRepository.deleteAll();
     }
 

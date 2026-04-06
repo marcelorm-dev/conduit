@@ -16,5 +16,6 @@ public class ErrorMessages {
     public static final String ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED = "Access denied. Token is invalid or expired";
     public static final String TOKEN_NOT_INFORMED = "Token must be informed";
     public static final String EMAIL_IS_ALREADY_BEING_USED = "Email is already being used";
+    public static final String USERNAME_NOT_FOUND = "Username not found";
 
 }
