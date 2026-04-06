@@ -3,7 +3,7 @@ package com.marcelormdev.conduit_service.user;
 import java.util.HashMap;
 import java.util.Map;
 
-class UserDTO {
+public class UserDTO {
 
     static final String EMAIL = "email";
     static final String PASSWORD = "password";
@@ -14,7 +14,7 @@ class UserDTO {
 
     private Map<String, String> fields = new HashMap<>();
 
-    UserDTO(Map<String, String> fields) {
+    public UserDTO(Map<String, String> fields) {
         this.fields = fields;
     }
 
@@ -27,35 +27,35 @@ class UserDTO {
         this.fields.put(IMAGE, user.getImage());
     }
 
-    String email() {
+    public String email() {
         return this.fields.get(EMAIL);
     }
 
-    String password() {
+    public String password() {
         return this.fields.get(PASSWORD);
     }
 
-    String username() {
+    public String username() {
         return this.fields.get(USERNAME);
     }
 
-    String bio() {
+    public String bio() {
         return this.fields.get(BIO);
     }
 
-    boolean hasBio() {
+    public boolean hasBio() {
         return this.fields.containsKey(BIO);
     }
 
-    String image() {
+    public String image() {
         return this.fields.get(IMAGE);
     }
 
-    boolean hasImage() {
+    public boolean hasImage() {
         return this.fields.containsKey(IMAGE);
     }
 
-    String token() {
+    public String token() {
         return this.fields.get(TOKEN);
     }
 

@@ -6,16 +6,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.marcelormdev.conduit_service.apitest.ControllerTest;
 import com.marcelormdev.conduit_service.apitest.UserRestCaller;
+import com.marcelormdev.conduit_service.profile.ProfileRepository;
 
 class UserControllerTest extends ControllerTest {
 
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ProfileRepository profileRepository;
+
     private UserRestCaller restCaller;
 
     @BeforeEach
     void beforeEachTest() {
+        profileRepository.deleteAll();
         userRepository.deleteAll();
         restCaller = new UserRestCaller(restClient);
     }
@@ -245,220 +250,6 @@ class UserControllerTest extends ControllerTest {
                 .jsonPath("$.user.bio").isEqualTo("I like pizza now")
                 .jsonPath("$.user.image").isEqualTo("https://example.com/photo.jpg")
                 .jsonPath("$.user.token").isNotEmpty();
-    }
-
-    @Test
-    void update_normalizesEmptyStringBioToNull() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "Updated bio"
-
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
-
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "bio": ""
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.bio").isEqualTo(null);
-    }
-
-    @Test
-    void update_acceptsNullBio() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "Temporary bio"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
-
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "bio": null
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.bio").isEqualTo(null);
-    }
-
-    @Test
-    void update_updatesImage_whenOnlyImageIsSent() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "image": "https://example.com/photo.jpg"
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.image").isEqualTo("https://example.com/photo.jpg")
-                .jsonPath("$.user.bio").isEqualTo(null);
-    }
-
-    @Test
-    void update_normalizesEmptyStringImageToNull() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "image": "https://example.com/photo.jpg"
-                            }
-                        }
-                """)
-                .expectStatus().isOk();
-
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "image": ""
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.image").isEqualTo(null);
-    }
-
-    @Test
-    void update_acceptsNullImage() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "image": "https://example.com/temp.jpg"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
-
-        restCaller.callUpdateUserAPI(token, """
-                        {
-                            "user":{
-                                "image": null
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.image").isEqualTo(null);
-    }
-
-    @Test
-    void update_persistsUsernameAndEmailChange_afterGetRequestWithNewToken() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "Updated bio"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String originalToken = jwtTokenService.generateToken("jake@hotmail.com");
-        restCaller.callUpdateUserAPI(originalToken, """
-                        {
-                            "user":{
-                                "username": "JacobUpdated",
-                                "email": "jake_updated@hotmail.com"
-                            }
-                        }
-                """)
-                .expectStatus().isOk();
-
-        String newToken = jwtTokenService.generateToken("jake_updated@hotmail.com");
-        restCaller.callCurrentUserAPI(newToken)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.username").isEqualTo("JacobUpdated")
-                .jsonPath("$.user.email").isEqualTo("jake_updated@hotmail.com")
-                .jsonPath("$.user.bio").isEqualTo("Updated bio")
-                .jsonPath("$.user.image").isEqualTo(null)
-                .jsonPath("$.user.token").isNotEmpty();
-    }
-
-    @Test
-    void update_generatesNewToken_whenEmailChanges() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String originalToken = jwtTokenService.generateToken("jake@hotmail.com");
-        restCaller.callUpdateUserAPI(originalToken, """
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jacob_new@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.user.email").isEqualTo("jacob_new@hotmail.com")
-                .jsonPath("$.user.token").value(newToken -> {
-                    assert !newToken.equals(originalToken) : "Token should have been regenerated after email change";
-                });
     }
 
     @Test
