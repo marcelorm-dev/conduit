@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.marcelormdev.conduit_service.common.http.JwtAuthorizationHeader;
+import com.marcelormdev.conduit_service.common.http.AuthorizationHeader;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -47,7 +47,7 @@ public class UserController {
 
     @GetMapping("/api/user")
     public BodyResponse currentUser(@RequestHeader HttpHeaders headers) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         UserDTO currentUser = userService.currentUser(token);
 
         return BodyResponse.of(currentUser);
@@ -71,7 +71,7 @@ public class UserController {
 
     @PutMapping("/api/user")
     public BodyResponse update(@RequestHeader HttpHeaders headers, @RequestBody Map<String, Map<String, String>> body) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         UserDTO updatedUser = userService.update(token, new UserDTO(body.get("user")));
 
         return BodyResponse.of(updatedUser);
@@ -79,7 +79,7 @@ public class UserController {
 
     @GetMapping("/api/users")
     public List<BodyResponse> getAllUsers(@RequestHeader HttpHeaders headers) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         return userService.getAllUsers(token).stream().map(BodyResponse::of).toList();
     }
 

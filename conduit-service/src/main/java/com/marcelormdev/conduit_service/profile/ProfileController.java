@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.marcelormdev.conduit_service.common.http.JwtAuthorizationHeader;
+import com.marcelormdev.conduit_service.common.http.AuthorizationHeader;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -38,19 +38,19 @@ public class ProfileController {
 
     @GetMapping("/api/profiles/{username}")
     public BodyResponse getProfile(@PathVariable String username, @RequestHeader HttpHeaders headers) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         return BodyResponse.of(profileService.getProfile(username, token));
     }
 
     @PostMapping("/api/profiles/{username}/follow")
     public BodyResponse follow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         return BodyResponse.of(profileService.follow(username, token));
     }
 
     @DeleteMapping("/api/profiles/{username}/follow")
     public BodyResponse unfollow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
-        String token = new JwtAuthorizationHeader(headers).getToken();
+        String token = new AuthorizationHeader(headers).getToken();
         return BodyResponse.of(profileService.unfollow(username, token));
     }
 
