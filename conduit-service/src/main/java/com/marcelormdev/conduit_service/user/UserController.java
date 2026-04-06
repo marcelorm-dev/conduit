@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.marcelormdev.conduit_service.http.JwtAuthorizationHeader;
+import com.marcelormdev.conduit_service.common.http.JwtAuthorizationHeader;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)

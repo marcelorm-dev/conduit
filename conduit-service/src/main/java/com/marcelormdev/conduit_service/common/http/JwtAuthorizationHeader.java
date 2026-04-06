@@ -1,4 +1,4 @@
-package com.marcelormdev.conduit_service.http;
+package com.marcelormdev.conduit_service.common.http;
 
 import org.springframework.http.HttpHeaders;
 

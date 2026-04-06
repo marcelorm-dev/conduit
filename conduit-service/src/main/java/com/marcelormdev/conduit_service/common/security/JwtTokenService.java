@@ -1,4 +1,4 @@
-package com.marcelormdev.conduit_service.security;
+package com.marcelormdev.conduit_service.common.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;

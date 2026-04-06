@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.security.JwtTokenService;
+import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.user.UserDTO;
 import com.marcelormdev.conduit_service.user.UserService;
 
