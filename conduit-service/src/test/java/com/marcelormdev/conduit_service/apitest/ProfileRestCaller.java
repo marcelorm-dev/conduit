@@ -11,7 +11,7 @@ public class ProfileRestCaller {
     }
 
     public RestTestClient.ResponseSpec callGetProfileAPI(String username) {
-        return restCaller.getAnonymous("/api/profiles/" + username);
+        return callGetProfileAPI(username, null);
     }
 
     public RestTestClient.ResponseSpec callGetProfileAPI(String username, String token) {
@@ -19,7 +19,7 @@ public class ProfileRestCaller {
     }
 
     public RestTestClient.ResponseSpec callFollowAPI(String username, String token) {
-        return restCaller.postWithToken("/api/profiles/" + username + "/follow", token);
+        return restCaller.post("/api/profiles/" + username + "/follow", token, null);
     }
 
     public RestTestClient.ResponseSpec callUnfollowAPI(String username, String token) {

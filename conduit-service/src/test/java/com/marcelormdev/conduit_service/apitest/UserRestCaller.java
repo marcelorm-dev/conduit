@@ -11,11 +11,11 @@ public class UserRestCaller {
     }
 
     public RestTestClient.ResponseSpec callRegisterAPI(String body) {
-        return restCaller.post("/api/users", body);
+        return restCaller.post("/api/users", null, body);
     }
 
     public RestTestClient.ResponseSpec callLoginAPI(String body) {
-        return restCaller.post("/api/users/login", body);
+        return restCaller.post("/api/users/login", null, body);
     }
 
     public RestTestClient.ResponseSpec callListUsersAPI(String token) {
@@ -31,7 +31,7 @@ public class UserRestCaller {
     }
 
     public RestTestClient.ResponseSpec callRenewTokenAPI(String body) {
-        return restCaller.put("/api/token", body);
+        return restCaller.put("/api/token", null, body);
     }
 
 }
