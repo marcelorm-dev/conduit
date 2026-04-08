@@ -80,7 +80,7 @@ class UserServiceTest {
         for (String nullOrBlankToken : nullOrBlankTokens) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                     () -> userService.currentUser(nullOrBlankToken));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
 
@@ -103,7 +103,7 @@ class UserServiceTest {
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> userService.currentUser(tokenOfInvalidUser));
-        assertEquals(ErrorMessages.ACCESS_DENIED, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
     @Test
@@ -609,7 +609,7 @@ class UserServiceTest {
         for (String nullOrBlankToken : nullOrBlankTokens) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                     () -> userService.update(nullOrBlankToken, userDTO));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
 
@@ -717,7 +717,7 @@ class UserServiceTest {
         for (String nullOrBlankToken : nullOrBlankTokens) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                     () -> userService.getAllUsers(nullOrBlankToken));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
 

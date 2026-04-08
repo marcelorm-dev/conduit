@@ -8,6 +8,9 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
+import com.marcelormdev.conduit_service.common.exception.InvalidTokenException;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -38,7 +41,13 @@ public class JwtTokenService {
                 .compact();
     }
 
-    public String extractEmail(String token) {
+    public String extractEmail(String token) throws InvalidTokenException {
+        if (token == null || token.isBlank())
+            throw new InvalidTokenException(ErrorMessages.TOKEN_NOT_INFORMED);
+
+        if (!isTokenValid(token))
+            throw new InvalidTokenException(ErrorMessages.TOKEN_INVALID_OR_EXPIRED);
+
         return parseClaims(token).getSubject();
     }
 

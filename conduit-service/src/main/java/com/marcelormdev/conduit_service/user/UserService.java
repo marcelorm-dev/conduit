@@ -10,14 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.common.exception.InvalidTokenException;
 import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.common.validation.Validator;
 
 @Service
 public class UserService {
-
-    public record UserRegisteredEvent(User user) {
-    }
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -34,16 +32,18 @@ public class UserService {
 
     private User authenticate(String token) {
         new Validator()
-                .notNullOrBlank(token, ErrorMessages.TOKEN_NOT_INFORMED)
+                .notNullOrBlank(token, ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED)
                 .throwViolations(AuthenticationException::new);
 
-        if (!jwtTokenService.isTokenValid(token)) {
+        String email;
+        try {
+            email = jwtTokenService.extractEmail(token);
+        } catch (InvalidTokenException e) {
             throw new AuthenticationException(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED);
         }
 
-        String email = jwtTokenService.extractEmail(token);
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthenticationException(ErrorMessages.ACCESS_DENIED));
+                .orElseThrow(() -> new AuthenticationException(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND));
     }
 
     public UserDTO currentUser(String token) {

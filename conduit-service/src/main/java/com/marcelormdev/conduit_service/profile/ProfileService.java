@@ -8,28 +8,32 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.common.exception.InvalidTokenException;
 import com.marcelormdev.conduit_service.common.security.JwtTokenService;
-import com.marcelormdev.conduit_service.user.UserDTO;
-import com.marcelormdev.conduit_service.user.UserService;
-import com.marcelormdev.conduit_service.user.UserService.UserRegisteredEvent;
+import com.marcelormdev.conduit_service.user.UserRegisteredEvent;
 
 @Service
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
-    private final UserService userService;
+
     private final JwtTokenService jwtTokenService;
 
-    ProfileService(ProfileRepository profileRepository, UserService userService, JwtTokenService jwtTokenService) {
+    ProfileService(ProfileRepository profileRepository, JwtTokenService jwtTokenService) {
         this.profileRepository = profileRepository;
-        this.userService = userService;
         this.jwtTokenService = jwtTokenService;
     }
 
     private Profile getAuthenticatedProfile(String token) {
-        UserDTO userDTO = userService.currentUser(token);
-        return profileRepository.findByUserEmail(userDTO.email())
-                .orElseThrow(() -> new AuthenticationException(ErrorMessages.EMAIL_NOT_FOUND));
+        String email;
+        try {
+            email = jwtTokenService.extractEmail(token);
+        } catch (InvalidTokenException e) {
+            throw new AuthenticationException(e.getMessage());
+        }
+
+        return profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new AuthenticationException(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND));
     }
 
     private Profile findByUsername(String username) {

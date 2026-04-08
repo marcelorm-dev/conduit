@@ -111,7 +111,7 @@ class ProfileServiceTest {
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> profileService.getProfile("celeb", prof.token()));
-        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
     @Test
@@ -151,7 +151,7 @@ class ProfileServiceTest {
         for (String token : nullOrBlankTokens) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                     () -> profileService.follow("celeb", token));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
 
@@ -184,7 +184,7 @@ class ProfileServiceTest {
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> profileService.follow("celeb", prof.token()));
-        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
     @Test
@@ -219,7 +219,7 @@ class ProfileServiceTest {
         for (String token : nullOrBlankTokens) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                     () -> profileService.unfollow("celeb", token));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
 
@@ -252,7 +252,7 @@ class ProfileServiceTest {
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> profileService.unfollow("celeb", prof.token()));
-        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
 }
