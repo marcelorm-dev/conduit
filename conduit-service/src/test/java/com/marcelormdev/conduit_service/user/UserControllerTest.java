@@ -133,7 +133,7 @@ class UserControllerTest extends ControllerTest {
         registerUser("Jacob", "jake@hotmail.com", "I like barbecue");
         registerUser("Joe", "joe@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callListUsersAPI(token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -158,7 +158,7 @@ class UserControllerTest extends ControllerTest {
     void getCurrentUser_returnsCurrentUser_whenTokenIsValid() {
         registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callCurrentUserAPI(token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -177,7 +177,7 @@ class UserControllerTest extends ControllerTest {
     void update_returnsUpdatedUser_whenTokenIsValid() {
         registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callUpdateUserAPI(token, """
                         {
                             "user":{
@@ -219,7 +219,7 @@ class UserControllerTest extends ControllerTest {
     void update_returns422_whenRequiredFieldsAreBlank() {
         registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callUpdateUserAPI(token, """
                         {
                             "user":{

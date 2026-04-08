@@ -14,18 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.commons.JsonToMapConverter;
 import com.marcelormdev.conduit_service.profile.ProfileRepository;
 
 @SpringBootTest
 class UserServiceTest {
-
-    @Autowired
-    private JwtTokenService jwtTokenService;
 
     @Autowired
     private UserService userService;
@@ -35,6 +32,9 @@ class UserServiceTest {
 
     @Autowired
     private ProfileRepository profileRepository;
+
+    @Autowired
+    private AuthService authService;
 
     @BeforeEach
     void beforeEachTest() {
@@ -99,7 +99,7 @@ class UserServiceTest {
     void getCurrentUser_throwsException_whenTokenBelongsToNonExistentUser() {
         registerUser("joe", "joe@gmail.com");
 
-        String tokenOfInvalidUser = jwtTokenService.generateToken("helloworld@gmail.com");
+        String tokenOfInvalidUser = authService.generateToken("helloworld@gmail.com");
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> userService.currentUser(tokenOfInvalidUser));

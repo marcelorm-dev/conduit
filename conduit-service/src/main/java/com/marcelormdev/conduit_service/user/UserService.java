@@ -7,11 +7,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
+import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.common.exception.InvalidTokenException;
-import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.common.validation.Validator;
 
 @Service
@@ -21,33 +19,16 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    private final JwtTokenService jwtTokenService;
+    private final AuthService authService;
 
-    UserService(ApplicationEventPublisher eventPublisher, UserRepository userRepository,
-            JwtTokenService jwtTokenService) {
+    UserService(ApplicationEventPublisher eventPublisher, UserRepository userRepository, AuthService authService) {
         this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
-        this.jwtTokenService = jwtTokenService;
-    }
-
-    private User authenticate(String token) {
-        new Validator()
-                .notNullOrBlank(token, ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED)
-                .throwViolations(AuthenticationException::new);
-
-        String email;
-        try {
-            email = jwtTokenService.extractEmail(token);
-        } catch (InvalidTokenException e) {
-            throw new AuthenticationException(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED);
-        }
-
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthenticationException(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND));
+        this.authService = authService;
     }
 
     public UserDTO currentUser(String token) {
-        User user = authenticate(token);
+        User user = authService.authenticate(token, userRepository::findByEmail);
         return new UserDTO(user);
     }
 
@@ -85,7 +66,7 @@ public class UserService {
         if (userOptional.isPresent())
             throw new FieldValidationException(ErrorMessages.EMAIL_IS_ALREADY_BEING_USED);
 
-        String token = jwtTokenService.generateToken(email);
+        String token = authService.generateToken(email);
         User user = new User(
                 userDTO.email(),
                 userDTO.password(),
@@ -102,7 +83,7 @@ public class UserService {
 
     @Transactional
     public UserDTO update(String token, UserDTO userDTO) {
-        User user = authenticate(token);
+        User user = authService.authenticate(token, userRepository::findByEmail);
 
         String username = userDTO.username();
         String email = userDTO.email();
@@ -116,7 +97,7 @@ public class UserService {
                 .throwViolations(FieldValidationException::new);
 
         boolean wasEmailUpdated = email != null && !user.getEmail().equals(email);
-        String newToken = wasEmailUpdated ? jwtTokenService.generateToken(email) : null;
+        String newToken = wasEmailUpdated ? authService.generateToken(email) : null;
 
         user.update(
                 userDTO.username(),
@@ -134,7 +115,7 @@ public class UserService {
     }
 
     public List<UserDTO> getAllUsers(String token) {
-        authenticate(token);
+        authService.authenticate(token, userRepository::findByEmail);
         return userRepository.findAll().stream().map(UserDTO::new).toList();
     }
 
@@ -148,8 +129,8 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new FieldValidationException(ErrorMessages.EMAIL_NOT_FOUND));
 
-        if (!jwtTokenService.isTokenValid(user.getToken()))
-            user.setToken(jwtTokenService.generateToken(email));
+        if (!authService.isTokenValid(user.getToken()))
+            user.setToken(authService.generateToken(email));
 
         user = userRepository.save(user);
 

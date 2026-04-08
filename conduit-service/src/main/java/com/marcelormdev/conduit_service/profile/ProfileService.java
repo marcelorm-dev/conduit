@@ -5,11 +5,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
+import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.common.exception.InvalidTokenException;
-import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.user.UserRegisteredEvent;
 
 @Service
@@ -17,23 +15,11 @@ public class ProfileService {
 
     private final ProfileRepository profileRepository;
 
-    private final JwtTokenService jwtTokenService;
+    private final AuthService authService;
 
-    ProfileService(ProfileRepository profileRepository, JwtTokenService jwtTokenService) {
+    ProfileService(ProfileRepository profileRepository, AuthService authService) {
         this.profileRepository = profileRepository;
-        this.jwtTokenService = jwtTokenService;
-    }
-
-    private Profile getAuthenticatedProfile(String token) {
-        String email;
-        try {
-            email = jwtTokenService.extractEmail(token);
-        } catch (InvalidTokenException e) {
-            throw new AuthenticationException(e.getMessage());
-        }
-
-        return profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new AuthenticationException(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND));
+        this.authService = authService;
     }
 
     private Profile findByUsername(String username) {
@@ -45,16 +31,18 @@ public class ProfileService {
     public ProfileDTO getProfile(String username, String token) {
         Profile targetProfile = findByUsername(username);
 
-        boolean following = token != null && jwtTokenService.isTokenValid(token)
-                ? getAuthenticatedProfile(token).isFollowing(targetProfile)
-                : false;
+        boolean following = false;
+        if (token != null && authService.isTokenValid(token)) {
+            Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
+            following = currentUserProfile.isFollowing(targetProfile);
+        }
 
         return ProfileDTO.of(targetProfile, following);
     }
 
     @Transactional
     public ProfileDTO follow(String username, String token) {
-        Profile currentUserProfile = getAuthenticatedProfile(token);
+        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.follow(targetProfile);
@@ -67,7 +55,7 @@ public class ProfileService {
 
     @Transactional
     public ProfileDTO unfollow(String username, String token) {
-        Profile currentUserProfile = getAuthenticatedProfile(token);
+        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.unfollow(targetProfile);
