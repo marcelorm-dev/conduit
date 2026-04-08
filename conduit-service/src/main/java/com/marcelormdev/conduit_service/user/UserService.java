@@ -1,7 +1,6 @@
 package com.marcelormdev.conduit_service.user;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -62,8 +61,7 @@ public class UserService {
                 .emailFormat(email, ErrorMessages.INVALID_EMAIL)
                 .throwViolations(FieldValidationException::new);
 
-        Optional<User> userOptional = userRepository.findByEmail(email);
-        if (userOptional.isPresent())
+        if (userRepository.existsByEmail(email))
             throw new FieldValidationException(ErrorMessages.EMAIL_IS_ALREADY_BEING_USED);
 
         String token = authService.generateToken(email);
