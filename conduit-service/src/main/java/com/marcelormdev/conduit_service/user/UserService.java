@@ -3,6 +3,7 @@ package com.marcelormdev.conduit_service.user;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,19 +12,23 @@ import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
 import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.common.validation.Validator;
-import com.marcelormdev.conduit_service.profile.Profile;
-import com.marcelormdev.conduit_service.profile.ProfileRepository;
 
 @Service
 public class UserService {
 
+    public record UserRegisteredEvent(User user) {
+    }
+
+    private final ApplicationEventPublisher eventPublisher;
+
     private final UserRepository userRepository;
-    private final ProfileRepository profileRepository;
+
     private final JwtTokenService jwtTokenService;
 
-    UserService(UserRepository userRepository, ProfileRepository profileRepository, JwtTokenService jwtTokenService) {
+    UserService(ApplicationEventPublisher eventPublisher, UserRepository userRepository,
+            JwtTokenService jwtTokenService) {
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
-        this.profileRepository = profileRepository;
         this.jwtTokenService = jwtTokenService;
     }
 
@@ -90,7 +95,7 @@ public class UserService {
                 token);
 
         user = userRepository.save(user);
-        profileRepository.save(new Profile(user));
+        eventPublisher.publishEvent(new UserRegisteredEvent(user));
 
         return new UserDTO(user);
     }

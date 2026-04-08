@@ -2,12 +2,16 @@ package com.marcelormdev.conduit_service.profile;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
 import com.marcelormdev.conduit_service.common.security.JwtTokenService;
 import com.marcelormdev.conduit_service.user.UserDTO;
 import com.marcelormdev.conduit_service.user.UserService;
+import com.marcelormdev.conduit_service.user.UserService.UserRegisteredEvent;
 
 @Service
 public class ProfileService {
@@ -24,7 +28,8 @@ public class ProfileService {
 
     private Profile getAuthenticatedProfile(String token) {
         UserDTO userDTO = userService.currentUser(token);
-        return profileRepository.findByUserEmail(userDTO.email()).get();
+        return profileRepository.findByUserEmail(userDTO.email())
+                .orElseThrow(() -> new AuthenticationException(ErrorMessages.EMAIL_NOT_FOUND));
     }
 
     private Profile findByUsername(String username) {
@@ -36,8 +41,9 @@ public class ProfileService {
     public ProfileDTO getProfile(String username, String token) {
         Profile targetProfile = findByUsername(username);
 
-        boolean following = token == null || !jwtTokenService.isTokenValid(token) ? false
-                : getAuthenticatedProfile(token).isFollowing(targetProfile);
+        boolean following = token != null && jwtTokenService.isTokenValid(token)
+                ? getAuthenticatedProfile(token).isFollowing(targetProfile)
+                : false;
 
         return ProfileDTO.of(targetProfile, following);
     }
@@ -66,6 +72,12 @@ public class ProfileService {
         boolean following = currentUserProfile.isFollowing(targetProfile);
 
         return ProfileDTO.of(targetProfile, following);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onUserRegistered(UserRegisteredEvent event) {
+        Profile profile = new Profile(event.user());
+        profileRepository.save(profile);
     }
 
 }

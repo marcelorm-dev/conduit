@@ -103,6 +103,18 @@ class ProfileServiceTest {
     }
 
     @Test
+    void getProfile_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
+        UserDTO prof = registerUser("prof", "prof@test.com");
+        registerUser("celeb", "celeb@test.com");
+
+        profileRepository.findByUserEmail(prof.email()).ifPresent(profileRepository::delete);
+
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> profileService.getProfile("celeb", prof.token()));
+        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
+    }
+
+    @Test
     void getProfile_throwsException_whenUsernameNotFound() {
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                 () -> profileService.getProfile("unknown", null));
@@ -164,6 +176,18 @@ class ProfileServiceTest {
     }
 
     @Test
+    void follow_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
+        UserDTO prof = registerUser("prof", "prof@test.com");
+        registerUser("celeb", "celeb@test.com");
+
+        profileRepository.findByUserEmail(prof.email()).ifPresent(profileRepository::delete);
+
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> profileService.follow("celeb", prof.token()));
+        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
+    }
+
+    @Test
     void unfollow_returnsProfileWithFollowingFalse_whenDatasAreValid() {
         UserDTO prof = registerUser("prof", "prof@test.com");
         registerUser("celeb", "celeb@test.com");
@@ -217,6 +241,18 @@ class ProfileServiceTest {
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                 () -> profileService.unfollow("unknown", prof.token()));
         assertEquals(ErrorMessages.USERNAME_NOT_FOUND, exception.getMessagesAsString());
+    }
+
+    @Test
+    void unfollow_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
+        UserDTO prof = registerUser("prof", "prof@test.com");
+        registerUser("celeb", "celeb@test.com");
+
+        profileRepository.findByUserEmail(prof.email()).ifPresent(profileRepository::delete);
+
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> profileService.unfollow("celeb", prof.token()));
+        assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
 }
