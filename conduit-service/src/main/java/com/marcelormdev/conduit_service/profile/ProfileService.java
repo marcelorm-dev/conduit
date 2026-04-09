@@ -28,7 +28,7 @@ public class ProfileService {
     }
 
     @Transactional(readOnly = true)
-    public ProfileDTO getProfile(String username, String token) {
+    public ProfileResponse getProfile(String username, String token) {
         Profile targetProfile = findByUsername(username);
 
         boolean following = false;
@@ -37,11 +37,11 @@ public class ProfileService {
             following = currentUserProfile.isFollowing(targetProfile);
         }
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
     }
 
     @Transactional
-    public ProfileDTO follow(String username, String token) {
+    public ProfileResponse follow(String username, String token) {
         Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
@@ -50,11 +50,11 @@ public class ProfileService {
 
         boolean following = currentUserProfile.isFollowing(targetProfile);
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
     }
 
     @Transactional
-    public ProfileDTO unfollow(String username, String token) {
+    public ProfileResponse unfollow(String username, String token) {
         Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
@@ -63,7 +63,7 @@ public class ProfileService {
 
         boolean following = currentUserProfile.isFollowing(targetProfile);
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)

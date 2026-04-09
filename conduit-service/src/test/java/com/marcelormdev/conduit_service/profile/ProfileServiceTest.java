@@ -53,10 +53,10 @@ class ProfileServiceTest {
     void getProfile_returnsProfile_withoutToken() {
         registerUser("celeb", "celeb@test.com", "123456");
 
-        ProfileDTO profile = profileService.getProfile("celeb", null);
+        ProfileResponse response = profileService.getProfile("celeb", null);
 
-        assertEquals("celeb", profile.username());
-        assertFalse(profile.following());
+        assertEquals("celeb", response.profile().username());
+        assertFalse(response.profile().following());
     }
 
     @Test
@@ -64,10 +64,10 @@ class ProfileServiceTest {
         String token = registerUser("prof", "prof@test.com", "123456").user().token();
         registerUser("celeb", "celeb@test.com", "654321");
 
-        ProfileDTO profile = profileService.getProfile("celeb", token);
+        ProfileResponse response = profileService.getProfile("celeb", token);
 
-        assertEquals("celeb", profile.username());
-        assertFalse(profile.following());
+        assertEquals("celeb", response.profile().username());
+        assertFalse(response.profile().following());
     }
 
     @Test
@@ -76,20 +76,20 @@ class ProfileServiceTest {
         registerUser("celeb", "celeb@test.com", "654321");
 
         profileService.follow("celeb", token);
-        ProfileDTO profile = profileService.getProfile("celeb", token);
+        ProfileResponse response = profileService.getProfile("celeb", token);
 
-        assertEquals("celeb", profile.username());
-        assertTrue(profile.following());
+        assertEquals("celeb", response.profile().username());
+        assertTrue(response.profile().following());
     }
 
     @Test
     void getProfile_returnsFollowingFalse_whenTokenIsInvalid() {
         registerUser("celeb", "celeb@test.com", "654321");
 
-        ProfileDTO profile = profileService.getProfile("celeb", "invalid-token");
+        ProfileResponse response = profileService.getProfile("celeb", "invalid-token");
 
-        assertEquals("celeb", profile.username());
-        assertFalse(profile.following());
+        assertEquals("celeb", response.profile().username());
+        assertFalse(response.profile().following());
     }
 
     @Test
@@ -118,10 +118,10 @@ class ProfileServiceTest {
         String token = registerUser("prof", "prof@test.com", "123456").user().token();
         registerUser("celeb", "celeb@test.com", "654321");
 
-        ProfileDTO profile = profileService.follow("celeb", token);
+        ProfileResponse response = profileService.follow("celeb", token);
 
-        assertEquals("celeb", profile.username());
-        assertTrue(profile.following());
+        assertEquals("celeb", response.profile().username());
+        assertTrue(response.profile().following());
     }
 
     @Test
@@ -130,9 +130,9 @@ class ProfileServiceTest {
         registerUser("celeb", "celeb@test.com", "654321");
 
         profileService.follow("celeb", token);
-        ProfileDTO profile = profileService.getProfile("celeb", token);
+        ProfileResponse response = profileService.getProfile("celeb", token);
 
-        assertTrue(profile.following());
+        assertTrue(response.profile().following());
     }
 
     @Test
@@ -189,9 +189,9 @@ class ProfileServiceTest {
 
         profileService.follow("celeb", token);
         profileService.unfollow("celeb", token);
-        ProfileDTO profile = profileService.getProfile("celeb", token);
+        ProfileResponse response = profileService.getProfile("celeb", token);
 
-        assertFalse(profile.following());
+        assertFalse(response.profile().following());
     }
 
     @Test

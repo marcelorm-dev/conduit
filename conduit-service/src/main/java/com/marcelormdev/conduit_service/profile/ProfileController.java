@@ -22,36 +22,22 @@ public class ProfileController {
         this.profileService = profileService;
     }
 
-    private record BodyResponse(ProfileResponse profile) {
-
-        private record ProfileResponse(String username, String bio, String image, boolean following) {
-        }
-
-        static BodyResponse of(ProfileDTO profileDTO) {
-            return new BodyResponse(new ProfileResponse(
-                    profileDTO.username(),
-                    profileDTO.bio(),
-                    profileDTO.image(),
-                    profileDTO.following()));
-        }
-    }
-
     @GetMapping("/api/profiles/{username}")
-    public BodyResponse getProfile(@PathVariable String username, @RequestHeader HttpHeaders headers) {
+    public ProfileResponse getProfile(@PathVariable String username, @RequestHeader HttpHeaders headers) {
         String token = new AuthorizationHeader(headers).getToken();
-        return BodyResponse.of(profileService.getProfile(username, token));
+        return profileService.getProfile(username, token);
     }
 
     @PostMapping("/api/profiles/{username}/follow")
-    public BodyResponse follow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
+    public ProfileResponse follow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
         String token = new AuthorizationHeader(headers).getToken();
-        return BodyResponse.of(profileService.follow(username, token));
+        return profileService.follow(username, token);
     }
 
     @DeleteMapping("/api/profiles/{username}/follow")
-    public BodyResponse unfollow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
+    public ProfileResponse unfollow(@PathVariable String username, @RequestHeader HttpHeaders headers) {
         String token = new AuthorizationHeader(headers).getToken();
-        return BodyResponse.of(profileService.unfollow(username, token));
+        return profileService.unfollow(username, token);
     }
 
 }
