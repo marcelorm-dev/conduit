@@ -27,67 +27,38 @@ public class UserController {
         this.userService = userService;
     }
 
-    private record BodyResponse(UserResponse user) {
-
-        private record UserResponse(String email, String username, String bio, String image, String token) {
-        }
-
-        static BodyResponse of(UserDTO userDTO) {
-            UserResponse userResponse = new UserResponse(
-                    userDTO.email(),
-                    userDTO.username(),
-                    userDTO.bio(),
-                    userDTO.image(),
-                    userDTO.token());
-
-            return new BodyResponse(userResponse);
-        }
-
-    }
-
     @GetMapping("/api/user")
-    public BodyResponse currentUser(@RequestHeader HttpHeaders headers) {
+    public UserResponse currentUser(@RequestHeader HttpHeaders headers) {
         String token = new AuthorizationHeader(headers).getToken();
-        UserDTO currentUser = userService.currentUser(token);
-
-        return BodyResponse.of(currentUser);
+        return userService.currentUser(token);
     }
 
     @PostMapping("/api/users/login")
-    public BodyResponse authenticate(@RequestBody Map<String, Map<String, String>> body) {
-        UserDTO requestUser = new UserDTO(body.get("user"));
-        UserDTO loggedUser = userService.login(requestUser.email(), requestUser.password());
-
-        return BodyResponse.of(loggedUser);
+    public UserResponse authenticate(@RequestBody LoginUserRequest request) {
+        return userService.login(request);
     }
 
     @PostMapping("/api/users")
     @ResponseStatus(HttpStatus.CREATED)
-    public BodyResponse register(@RequestBody Map<String, Map<String, String>> body) {
-        UserDTO registeredUser = userService.register(new UserDTO(body.get("user")));
-
-        return BodyResponse.of(registeredUser);
+    public UserResponse register(@RequestBody RegisterUserRequest request) {
+        return userService.register(request);
     }
 
     @PutMapping("/api/user")
-    public BodyResponse update(@RequestHeader HttpHeaders headers, @RequestBody Map<String, Map<String, String>> body) {
+    public UserResponse update(@RequestHeader HttpHeaders headers, @RequestBody UpdateUserRequest request) {
         String token = new AuthorizationHeader(headers).getToken();
-        UserDTO updatedUser = userService.update(token, new UserDTO(body.get("user")));
-
-        return BodyResponse.of(updatedUser);
+        return userService.update(token, request);
     }
 
     @GetMapping("/api/users")
-    public List<BodyResponse> getAllUsers(@RequestHeader HttpHeaders headers) {
+    public List<UserResponse> getAllUsers(@RequestHeader HttpHeaders headers) {
         String token = new AuthorizationHeader(headers).getToken();
-        return userService.getAllUsers(token).stream().map(BodyResponse::of).toList();
+        return userService.getAllUsers(token);
     }
 
     @PutMapping("/api/token")
-    public BodyResponse renewToken(@RequestBody Map<String, Map<String, String>> body) {
-        UserDTO user = userService.renewToken(body.get("user").get("email"));
-
-        return BodyResponse.of(user);
+    public UserResponse renewToken(@RequestBody Map<String, Map<String, String>> body) {
+        return userService.renewToken(body.get("user").get("email"));
     }
 
 }

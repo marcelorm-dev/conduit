@@ -26,12 +26,15 @@ public class UserService {
         this.authService = authService;
     }
 
-    public UserDTO currentUser(String token) {
+    public UserResponse currentUser(String token) {
         User user = authService.authenticate(token, userRepository::findByEmail);
-        return new UserDTO(user);
+        return new UserResponse(user);
     }
 
-    public UserDTO login(String email, String password) {
+    public UserResponse login(LoginUserRequest request) {
+        String email = request.user().email();
+        String password = request.user().password();
+
         new Validator()
                 .notNullOrBlank(email, ErrorMessages.EMAIL_NOT_INFORMED)
                 .notNullOrBlank(password, ErrorMessages.PASSWORD_NOT_INFORMED)
@@ -45,14 +48,14 @@ public class UserService {
             throw new FieldValidationException(ErrorMessages.INVALID_PASSWORD);
         }
 
-        return new UserDTO(user);
+        return new UserResponse(user);
     }
 
     @Transactional
-    public UserDTO register(UserDTO userDTO) {
-        String username = userDTO.username();
-        String email = userDTO.email();
-        String password = userDTO.password();
+    public UserResponse register(RegisterUserRequest request) {
+        String username = request.user().username();
+        String email = request.user().email();
+        String password = request.user().password();
 
         new Validator()
                 .notNullOrBlank(username, ErrorMessages.USERNAME_NOT_INFORMED)
@@ -66,26 +69,26 @@ public class UserService {
 
         String token = authService.generateToken(email);
         User user = new User(
-                userDTO.email(),
-                userDTO.password(),
-                userDTO.username(),
-                userDTO.bio(),
-                userDTO.image(),
+                request.user().email(),
+                request.user().password(),
+                request.user().username(),
+                request.user().bio(),
+                request.user().image(),
                 token);
 
         user = userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(user));
 
-        return new UserDTO(user);
+        return new UserResponse(user);
     }
 
     @Transactional
-    public UserDTO update(String token, UserDTO userDTO) {
+    public UserResponse update(String token, UpdateUserRequest request) {
         User user = authService.authenticate(token, userRepository::findByEmail);
 
-        String username = userDTO.username();
-        String email = userDTO.email();
-        String password = userDTO.password();
+        String username = request.user().username();
+        String email = request.user().email();
+        String password = request.user().password();
 
         new Validator()
                 .notBlank(username, ErrorMessages.USERNAME_NOT_INFORMED)
@@ -98,27 +101,25 @@ public class UserService {
         String newToken = wasEmailUpdated ? authService.generateToken(email) : null;
 
         user.update(
-                userDTO.username(),
-                userDTO.email(),
-                userDTO.password(),
-                userDTO.hasBio(),
-                userDTO.bio(),
-                userDTO.hasImage(),
-                userDTO.image(),
+                request.user().username(),
+                request.user().email(),
+                request.user().password(),
+                request.user().bio(),
+                request.user().image(),
                 newToken);
 
         user = userRepository.save(user);
 
-        return new UserDTO(user);
+        return new UserResponse(user);
     }
 
-    public List<UserDTO> getAllUsers(String token) {
+    public List<UserResponse> getAllUsers(String token) {
         authService.authenticate(token, userRepository::findByEmail);
-        return userRepository.findAll().stream().map(UserDTO::new).toList();
+        return userRepository.findAll().stream().map(UserResponse::new).toList();
     }
 
     @Transactional
-    public UserDTO renewToken(String email) {
+    public UserResponse renewToken(String email) {
         new Validator()
                 .notNullOrBlank(email, ErrorMessages.EMAIL_NOT_INFORMED)
                 .emailFormat(email, ErrorMessages.INVALID_EMAIL)
@@ -132,7 +133,7 @@ public class UserService {
 
         user = userRepository.save(user);
 
-        return new UserDTO(user);
+        return new UserResponse(user);
     }
 
 }

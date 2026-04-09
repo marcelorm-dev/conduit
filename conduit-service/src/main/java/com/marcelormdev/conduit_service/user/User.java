@@ -85,19 +85,13 @@ public class User {
             this.token = token;
     }
 
-    void update(String username, String email, String password, boolean hasBio, String bio, boolean hasImage,
-            String image, String token) {
-
+    void update(String username, String email, String password, String bio, String image, String token) {
         this.setUsername(username);
         this.setEmail(email);
         this.setPassword(password);
         this.setToken(token);
-
-        if (hasBio)
-            this.setBio(bio);
-
-        if (hasImage)
-            this.setImage(image);
+        this.setBio(bio);
+        this.setImage(image);
 
     }
 
