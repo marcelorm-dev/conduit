@@ -3,6 +3,7 @@ package com.marcelormdev.conduit_service.user;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,11 +22,8 @@ import com.marcelormdev.conduit_service.common.http.AuthorizationHeader;
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class UserController {
 
-    private final UserService userService;
-
-    UserController(UserService userService) {
-        this.userService = userService;
-    }
+    @Autowired
+    private UserService userService;
 
     @GetMapping("/api/user")
     public UserResponse currentUser(@RequestHeader HttpHeaders headers) {

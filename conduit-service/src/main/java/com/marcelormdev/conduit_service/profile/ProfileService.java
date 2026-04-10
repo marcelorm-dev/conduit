@@ -1,5 +1,6 @@
 package com.marcelormdev.conduit_service.profile;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
@@ -13,14 +14,11 @@ import com.marcelormdev.conduit_service.user.UserRegisteredEvent;
 @Service
 public class ProfileService {
 
-    private final ProfileRepository profileRepository;
+    @Autowired
+    private ProfileRepository profileRepository;
 
-    private final AuthService authService;
-
-    ProfileService(ProfileRepository profileRepository, AuthService authService) {
-        this.profileRepository = profileRepository;
-        this.authService = authService;
-    }
+    @Autowired
+    private AuthService authService;
 
     private Profile findByUsername(String username) {
         return profileRepository.findByUserUsername(username)

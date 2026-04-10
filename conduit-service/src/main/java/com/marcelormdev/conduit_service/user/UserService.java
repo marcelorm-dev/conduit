@@ -2,6 +2,7 @@ package com.marcelormdev.conduit_service.user;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,17 +15,14 @@ import com.marcelormdev.conduit_service.common.validation.Validator;
 @Service
 public class UserService {
 
-    private final ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
-    private final UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-    private final AuthService authService;
-
-    UserService(ApplicationEventPublisher eventPublisher, UserRepository userRepository, AuthService authService) {
-        this.eventPublisher = eventPublisher;
-        this.userRepository = userRepository;
-        this.authService = authService;
-    }
+    @Autowired
+    private AuthService authService;
 
     public UserResponse currentUser(String token) {
         User user = authService.authenticate(token, userRepository::findByEmail);

@@ -1,5 +1,6 @@
 package com.marcelormdev.conduit_service.profile;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,11 +17,8 @@ import com.marcelormdev.conduit_service.common.http.AuthorizationHeader;
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class ProfileController {
 
-    private final ProfileService profileService;
-
-    ProfileController(ProfileService profileService) {
-        this.profileService = profileService;
-    }
+    @Autowired
+    private ProfileService profileService;
 
     @GetMapping("/api/profiles/{username}")
     public ProfileResponse getProfile(@PathVariable String username, @RequestHeader HttpHeaders headers) {
