@@ -7,7 +7,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.marcelormdev.conduit_service.security.JwtTokenService;
+import com.marcelormdev.conduit_service.auth.AuthService;
 
 @SpringBootTest
 public abstract class ControllerTest {
@@ -16,7 +16,7 @@ public abstract class ControllerTest {
     private WebApplicationContext wac;
 
     @Autowired
-    protected JwtTokenService jwtTokenService;
+    protected AuthService authService;
 
     protected RestTestClient restClient;
 

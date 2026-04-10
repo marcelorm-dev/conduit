@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,21 +15,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.commons.JsonToMapConverter;
 import com.marcelormdev.conduit_service.profile.ProfileRepository;
-import com.marcelormdev.conduit_service.security.JwtTokenService;
 
 @SpringBootTest
 class UserServiceTest {
 
     @Autowired
-    private JwtTokenService jwtTokenService;
-
-    @Autowired
     private UserService userService;
+
+    private UserServiceTestHelper userServiceHelper;
 
     @Autowired
     private UserRepository userRepository;
@@ -36,923 +35,426 @@ class UserServiceTest {
     @Autowired
     private ProfileRepository profileRepository;
 
+    @Autowired
+    private AuthService authService;
+
     @BeforeEach
     void beforeEachTest() {
+        userServiceHelper = new UserServiceTestHelper(userService);
         profileRepository.deleteAll();
         userRepository.deleteAll();
     }
 
-    private UserDTO jsonToUserDTO(String json) {
-        JsonToMapConverter<Map<String, Map<String, String>>> jsonConverter = new JsonToMapConverter<>();
-        Map<String, Map<String, String>> jsonAsMap = jsonConverter.convert(json);
-        return new UserDTO(jsonAsMap.get("user"));
+    private UserResponse registerUser(String username, String email, String password) {
+        return userServiceHelper.registerUser(username, email, password);
+    }
+
+    private UserResponse registerUser(String username, String email, String password, String bio, String image) {
+        return userServiceHelper.registerUser(username, email, password, bio, image);
+    }
+
+    private UserResponse updateUser(String token, Map<String, String> params) {
+        return userServiceHelper.updateUser(token, params);
     }
 
     @Test
     void getCurrentUser_returnsUser_whenTokenIsValid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        UserResponse response = userService.currentUser(token);
 
-        String token = joe.token();
-        UserDTO userDTO = userService.currentUser(token);
-
-        assertEquals("joe@gmail.com", userDTO.email());
-        assertEquals("123456", userDTO.password());
-        assertEquals("joe", userDTO.username());
-        assertNull(userDTO.bio());
-        assertNull(userDTO.image());
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
+        assertEquals(token, response.user().token());
     }
 
     @Test
     void getCurrentUser_throwsException_whenTokenIsNullOrBlank() {
-        String[] nullOrBlankTokens = new String[] { null, " " };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String nullOrBlankToken : nullOrBlankTokens) {
+        for (String nullOrBlank : nullOrBlanks) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                    () -> userService.currentUser(nullOrBlankToken));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> userService.currentUser(nullOrBlank));
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void getCurrentUser_throwsException_whenTokenIsInvalid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        String invalidToken = joe.token() + "aaaaaaa";
+        String invalidToken = "aaaaaaa";
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> userService.currentUser(invalidToken));
-        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED,
+                exception.getMessagesAsString());
     }
 
     @Test
     void getCurrentUser_throwsException_whenTokenBelongsToNonExistentUser() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        registerUser("joe", "joe@gmail.com", "123456");
 
-        userService.register(newUserDTO);
-
-        String tokenOfInvalidUser = jwtTokenService.generateToken("helloworld@gmail.com");
+        String tokenOfInvalidUser = authService.generateToken("helloworld@gmail.com");
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> userService.currentUser(tokenOfInvalidUser));
-        assertEquals(ErrorMessages.ACCESS_DENIED, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_EMAIL_NOT_FOUND,
+                exception.getMessagesAsString());
     }
 
     @Test
     void login_returnsUser_whenCredentialsAreValid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        registerUser("joe", "joe@gmail.com", "123456");
 
-        userService.register(newUserDTO);
+        UserResponse response = userService.login(new LoginUserRequest("joe@gmail.com", "123456"));
 
-        UserDTO userDTO = userService.login("joe@gmail.com", "123456");
-
-        assertEquals("joe@gmail.com", userDTO.email());
-        assertEquals("123456", userDTO.password());
-        assertEquals("joe", userDTO.username());
-        assertNull(userDTO.bio());
-        assertNull(userDTO.image());
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
     }
 
     @Test
     void login_throwsException_whenEmailIsNullOrBlank() {
-        String[] nullOrBlankEmails = new String[] { null, " " };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String nullOrBlankEmail : nullOrBlankEmails) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                    () -> userService.login(nullOrBlankEmail, "123456"));
-            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> userService.login(new LoginUserRequest(nullOrBlank, "123456")));
+            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void login_throwsException_whenEmailIsntFormatted() {
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.login("blabla@gmailcom", "123456"));
+                () -> userService.login(new LoginUserRequest("blabla@gmailcom", "123456")));
         assertEquals(ErrorMessages.INVALID_EMAIL, exception.getMessagesAsString());
     }
 
     @Test
     void login_throwsException_whenPasswordIsNullOrBlank() {
-        String[] nullOrBlankPasswords = new String[] { null, " " };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String nullOrBlankPassword : nullOrBlankPasswords) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                    () -> userService.login("joe@gmail.com", nullOrBlankPassword));
-            assertEquals(ErrorMessages.PASSWORD_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> userService.login(new LoginUserRequest("joe@gmail.com", nullOrBlank)));
+            assertEquals(ErrorMessages.PASSWORD_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void login_throwsException_whenEmailIsntFoundInDatabase() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        userService.register(newUserDTO);
+        registerUser("joe", "joe@gmail.com", "123456");
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.login("joee@gmail.com", "123456"));
+                () -> userService.login(new LoginUserRequest("joee@gmail.com", "123456")));
         assertEquals(ErrorMessages.EMAIL_NOT_FOUND, exception.getMessagesAsString());
     }
 
     @Test
     void login_throwsException_whenPasswordIsWrong() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        userService.register(newUserDTO);
+        registerUser("joe", "joe@gmail.com", "123456");
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.login("joe@gmail.com", "aaaaaa"));
-        assertEquals(ErrorMessages.INVALID_PASSWORD, exception.getMessagesAsString());
+                () -> userService.login(new LoginUserRequest("joe@gmail.com", "aaaaaa")));
+        assertEquals(ErrorMessages.INVALID_PASSWORD,
+                exception.getMessagesAsString());
     }
 
     @Test
     void register_returnsNewUser_whenDatasAreValids() {
         assertEquals(0, userRepository.count());
 
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        UserResponse response = registerUser("joe", "joe@gmail.com", "123456");
 
-        UserDTO userDTO = userService.register(newUserDTO);
-
-        assertEquals("joe@gmail.com", userDTO.email());
-        assertEquals("123456", userDTO.password());
-        assertEquals("joe", userDTO.username());
-        assertNotNull(userDTO.token());
-        assertNull(userDTO.bio());
-        assertNull(userDTO.image());
-
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertNotNull(response.user().token());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
         assertEquals(1, userRepository.count());
 
     }
 
     @Test
     void register_throwsException_whenUsernameIsNullOrBlank() {
-        String[] jsons = new String[] {
-                """
-                        {
-                            "user": {
-                                "email" : "joe@gmail.com",
-                                "password" : "123456",
-                                "username" : null
-                            }
-                        }
-                        """,
-                """
-                        {
-                            "user": {
-                                "email" : "joe@gmail.com",
-                                "password" : "123456",
-                                "username" : " "
-                            }
-                        }
-                        """
-        };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String json : jsons) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                     () -> {
-                        UserDTO newUserDTO = jsonToUserDTO(json);
-                        userService.register(newUserDTO);
+                        registerUser(nullOrBlank, "joe@gmail.com", "123456");
                     });
-            assertEquals(ErrorMessages.USERNAME_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.USERNAME_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void register_throwsException_whenPasswordIsNullOrBlank() {
-        String[] jsons = new String[] {
-                """
-                        {
-                            "user": {
-                                "email" : "joe@gmail.com",
-                                "password" : null,
-                                "username" : "joe"
-                            }
-                        }
-                        """,
-                """
-                        {
-                            "user": {
-                                "email" : "joe@gmail.com",
-                                "password" : " ",
-                                "username" : "joe"
-                            }
-                        }
-                        """
-        };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String json : jsons) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                     () -> {
-                        UserDTO newUserDTO = jsonToUserDTO(json);
-                        userService.register(newUserDTO);
+                        registerUser("joe", "joe@gmail.com", nullOrBlank);
                     });
-            assertEquals(ErrorMessages.PASSWORD_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.PASSWORD_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void register_throwsException_whenEmailIsNullOrBlank() {
-        String[] jsons = new String[] {
-                """
-                        {
-                            "user": {
-                                "email" : null,
-                                "password" : "123456",
-                                "username" : "joe"
-                            }
-                        }
-                        """,
-                """
-                        {
-                            "user": {
-                                "email" : " ",
-                                "password" : "123456",
-                                "username" : "joe"
-                            }
-                        }
-                        """
-        };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String json : jsons) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                     () -> {
-                        UserDTO newUserDTO = jsonToUserDTO(json);
-                        userService.register(newUserDTO);
+                        registerUser("joe", nullOrBlank, "123456");
                     });
-            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED, exception.getMessagesAsString());
+            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void register_throwsException_whenEmailIsntFormatted() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "blabla@gmailcom",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.register(newUserDTO));
+                () -> registerUser("joe", "blabla@gmailcom", "123456"));
         assertEquals(ErrorMessages.INVALID_EMAIL, exception.getMessagesAsString());
     }
 
     @Test
-    void register_normalizesStringBioToNull_whenStringBioIsEmpty() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "bio" : ""
-                    }
-                }
-                """);
+    void register_normalizesStringBioAndImageToNull_whenValuesAreEmpty() {
+        UserResponse response = registerUser("joe", "joe@gmail.com", "123456", "", "");
 
-        UserDTO userDTO = userService.register(newUserDTO);
-
-        assertNull(userDTO.bio());
-    }
-
-    @Test
-    void register_normalizesStringImageToNull_whenStringImageIsEmpty() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "image" : ""
-                    }
-                }
-                """);
-
-        UserDTO userDTO = userService.register(newUserDTO);
-
-        assertNull(userDTO.image());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
     }
 
     @Test
     void register_throwsException_whenEmailIsAlreadyTaken() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        userService.register(newUserDTO);
+        registerUser("joe", "joe@gmail.com", "123456");
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                 () -> {
-                    UserDTO sameEmailUserDTO = jsonToUserDTO("""
-                            {
-                                "user": {
-                                    "email" : "joe@gmail.com",
-                                    "password" : "654321",
-                                    "username" : "joe2"
-                                }
-                            }
-                            """);
-                    userService.register(sameEmailUserDTO);
+                    registerUser("joe2", "joe@gmail.com", "654321");
                 });
 
-        assertEquals(ErrorMessages.EMAIL_IS_ALREADY_BEING_USED, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.EMAIL_IS_ALREADY_BEING_USED,
+                exception.getMessagesAsString());
     }
 
     @Test
     void update_returnsUpdatedUser_whenDatasAreValids() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        UserResponse response = updateUser(token,
+                Map.of("username", "joeupdated",
+                        "email", "joe@gmail.com",
+                        "password", "newpassword",
+                        "bio", "bio",
+                        "image", "image"));
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "newpassword",
-                        "username" : "joeupdated",
-                        "bio" : "bio",
-                        "image" : "image"
-                    }
-                }
-                """);
-
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertEquals("joe@gmail.com", updated.email());
-        assertEquals("newpassword", updated.password());
-        assertEquals("joeupdated", updated.username());
-        assertEquals("bio", updated.bio());
-        assertEquals("image", updated.image());
-        assertEquals(joe.token(), updated.token());
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joeupdated", response.user().username());
+        assertEquals("bio", response.user().bio());
+        assertEquals("image", response.user().image());
+        assertEquals(token, response.user().token());
     }
 
     @Test
     void update_generatesNewToken_whenEmailIsUpdated() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456", "Some bio", "Some image").user().token();
+        UserResponse response = updateUser(token, Map.of("email", "newemail@gmail.com"));
 
-        UserDTO joe = userService.register(newUserDTO);
+        assertEquals("newemail@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertEquals("Some bio", response.user().bio());
+        assertEquals("Some image", response.user().image());
+        assertNotEquals(token, response.user().token());
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "newemail@gmail.com"
-                    }
-                }
-                """);
-
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertEquals("newemail@gmail.com", updated.email());
-        assertNotEquals(joe.token(), updated.token());
     }
 
     @Test
     void update_returnsUpdatedBio_whenOnlyBioIsSent() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        UserResponse response = updateUser(token, Map.of("bio", "Updated bio"));
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "bio" : "Updated bio"
-                    }
-                }
-                """);
-
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertEquals("joe@gmail.com", updated.email());
-        assertEquals("joe", updated.username());
-        assertEquals("Updated bio", updated.bio());
-        assertNull(updated.image());
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertEquals("Updated bio", response.user().bio());
+        assertNull(response.user().image());
     }
 
     @Test
     void update_returnsUpdatedImage_whenOnlyImageIsSent() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        UserResponse response = updateUser(token, Map.of("image", "https://example.com/photo.jpg"));
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "image" : "https://example.com/photo.jpg"
-                    }
-                }
-                """);
-
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertEquals("joe@gmail.com", updated.email());
-        assertEquals("joe", updated.username());
-        assertEquals("https://example.com/photo.jpg", updated.image());
-        assertNull(updated.bio());
+        assertEquals("joe@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertEquals("https://example.com/photo.jpg", response.user().image());
+        assertNull(response.user().bio());
     }
 
     @Test
-    void update_normalizesStringBioToNull_whenStringBioIsEmpty() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "bio" : "Some bio"
-                    }
-                }
-                """);
+    void update_normalizesStringBioAndImageToNull_whenValuesAreEmpty() {
+        String token = registerUser("joe", "joe@gmail.com", "123456", "Some bio", "https://example.com/photo.jpg")
+                .user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        UserResponse response = updateUser(token, Map.of("bio", "", "image", ""));
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "bio" : ""
-                    }
-                }
-                """);
-
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertNull(updated.bio());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
     }
 
     @Test
-    void update_normalizesStringImageToNull_whenStringImageIsEmpty() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "image" : "Some image"
-                    }
-                }
-                """);
+    void update_clearsBioAndImage_whenNullIsSent() {
+        String token = registerUser("joe", "joe@gmail.com", "123456", "Some bio", "https://example.com/photo.jpg")
+                .user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        Map<String, String> params = new HashMap<>();
+        params.put("bio", null);
+        params.put("image", null);
 
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "image" : ""
-                    }
-                }
-                """);
+        UserResponse response = updateUser(token, params);
 
-        UserDTO updated = userService.update(joe.token(), updatedUserDTO);
-
-        assertNull(updated.image());
-    }
-
-    @Test
-    void update_clearsBio_whenNullBioIsSent() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "bio" : "Some bio"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "bio" : "Temporary bio"
-                    }
-                }
-                """);
-
-        UserDTO withBio = userService.update(joe.token(), updatedUserDTO);
-        assertEquals("Temporary bio", withBio.bio());
-
-        updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "bio" : null
-                    }
-                }
-                """);
-
-        UserDTO cleared = userService.update(joe.token(), updatedUserDTO);
-        assertNull(cleared.bio());
-    }
-
-    @Test
-    void update_clearsImage_whenNullImageIsSent() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe",
-                        "image" : "https://example.com/photo.jpg"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "image" : "https://example.com/temp.jpg"
-                    }
-                }
-                """);
-
-        UserDTO withImage = userService.update(joe.token(), updatedUserDTO);
-        assertEquals("https://example.com/temp.jpg", withImage.image());
-
-        updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "image" : null
-                    }
-                }
-                """);
-
-        UserDTO cleared = userService.update(joe.token(), updatedUserDTO);
-        assertNull(cleared.image());
+        assertNull(response.user().bio());
+        assertNull(response.user().image());
     }
 
     @Test
     void update_throwsException_whenTokenIsNullOrBlank() {
-        UserDTO userDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        String[] nullOrBlankTokens = new String[] { null, " " };
-
-        for (String nullOrBlankToken : nullOrBlankTokens) {
+        for (String nullOrBlank : nullOrBlanks) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                    () -> userService.update(nullOrBlankToken, userDTO));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> updateUser(nullOrBlank, Map.of("username", "joeupdated")));
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void update_throwsException_whenTokenIsInvalid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        String invalidToken = joe.token() + "aaaaaaa";
+        String invalidToken = "aaaaaaa";
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                () -> userService.update(invalidToken, newUserDTO));
-        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+                () -> updateUser(invalidToken, Map.of("username", "joeupdated")));
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED,
+                exception.getMessagesAsString());
     }
 
     @Test
     void update_throwsException_whenUsernameIsBlank() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : ""
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.update(joe.token(), updatedUserDTO));
+                () -> updateUser(token, Map.of("username", "")));
         assertEquals(ErrorMessages.USERNAME_NOT_INFORMED, exception.getMessagesAsString());
     }
 
     @Test
     void update_throwsException_whenPasswordIsBlank() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.update(joe.token(), updatedUserDTO));
+                () -> updateUser(token, Map.of("password", "")));
         assertEquals(ErrorMessages.PASSWORD_NOT_INFORMED, exception.getMessagesAsString());
     }
 
     @Test
     void update_throwsException_whenEmailIsBlank() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.update(joe.token(), updatedUserDTO));
+                () -> updateUser(token, Map.of("email", "")));
         assertEquals(ErrorMessages.EMAIL_NOT_INFORMED, exception.getMessagesAsString());
     }
 
     @Test
     void update_throwsException_whenEmailIsntFormatted() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        UserDTO updatedUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "blabla@gmailcom",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                () -> userService.update(joe.token(), updatedUserDTO));
+                () -> updateUser(token, Map.of("email", "blabla@gmailcom")));
         assertEquals(ErrorMessages.INVALID_EMAIL, exception.getMessagesAsString());
     }
 
     @Test
     void getAllUsers_returnsAllUsers_whenTokenIsValid() {
-        UserDTO joeDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
+        registerUser("jane", "jane@gmail.com", "password123");
 
-        UserDTO joe = userService.register(joeDTO);
-
-        UserDTO janeDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "jane@gmail.com",
-                        "password" : "123456",
-                        "username" : "jane"
-                    }
-                }
-                """);
-
-        userService.register(janeDTO);
-
-        List<UserDTO> users = userService.getAllUsers(joe.token());
+        List<UserResponse> users = userService.getAllUsers(token);
 
         assertEquals(2, users.size());
     }
 
     @Test
     void getAllUsers_throwsException_whenTokenIsNullOrBlank() {
-        String[] nullOrBlankTokens = new String[] { null, " " };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String nullOrBlankToken : nullOrBlankTokens) {
+        for (String nullOrBlank : nullOrBlanks) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                    () -> userService.getAllUsers(nullOrBlankToken));
-            assertEquals(ErrorMessages.TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> userService.getAllUsers(nullOrBlank));
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 
     @Test
     void getAllUsers_throwsException_whenTokenIsInvalid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        UserDTO joe = userService.register(newUserDTO);
-
-        String invalidToken = joe.token() + "aaaaaaa";
+        String invalidToken = "aaaaaaa";
 
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
                 () -> userService.getAllUsers(invalidToken));
-        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED,
+                exception.getMessagesAsString());
     }
 
     @Test
     void renewToken_returnsUser_whenTokenIsStillValid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
+        String originalToken = registerUser("joe", "joe@gmail.com", "123456").user().token();
 
-        UserDTO joe = userService.register(newUserDTO);
+        String renewedToken = userService.renewToken("joe@gmail.com").user().token();
 
-        UserDTO renewed = userService.renewToken("joe@gmail.com");
-
-        assertEquals(joe.token(), renewed.token());
+        assertEquals(originalToken, renewedToken);
     }
 
     @Test
     void renewToken_generatesNewToken_whenStoredTokenIsInvalid() {
-        UserDTO newUserDTO = jsonToUserDTO("""
-                {
-                    "user": {
-                        "email" : "joe@gmail.com",
-                        "password" : "123456",
-                        "username" : "joe"
-                    }
-                }
-                """);
-
-        userService.register(newUserDTO);
+        registerUser("joe", "joe@gmail.com", "123456");
 
         User user = userRepository.findByEmail("joe@gmail.com").get();
         user.setToken("invalid-token");
         userRepository.save(user);
 
-        UserDTO renewed = userService.renewToken("joe@gmail.com");
+        UserResponse response = userService.renewToken("joe@gmail.com");
 
-        assertNotEquals("invalid-token", renewed.token());
-        assertNotNull(renewed.token());
+        assertNotEquals("invalid-token", response.user().token());
+        assertNotNull(response.user().token());
+        assertNotEquals("invalid-token", response.user().token());
     }
 
     @Test
     void renewToken_throwsException_whenEmailIsNullOrBlank() {
-        String[] nullOrBlankEmails = new String[] { null, " " };
+        String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String nullOrBlankEmail : nullOrBlankEmails) {
+        for (String nullOrBlank : nullOrBlanks) {
             FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
-                    () -> userService.renewToken(nullOrBlankEmail));
-            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED, exception.getMessagesAsString());
+                    () -> userService.renewToken(nullOrBlank));
+            assertEquals(ErrorMessages.EMAIL_NOT_INFORMED,
+                    exception.getMessagesAsString());
         }
     }
 

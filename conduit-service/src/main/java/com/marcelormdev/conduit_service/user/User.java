@@ -38,7 +38,8 @@ public class User {
     }
 
     void setEmail(String email) {
-        this.email = email;
+        if (email != null && !email.isBlank())
+            this.email = email;
     }
 
     String getPassword() {
@@ -46,7 +47,8 @@ public class User {
     }
 
     void setPassword(String password) {
-        this.password = password;
+        if (password != null && !password.isBlank())
+            this.password = password;
     }
 
     public String getUsername() {
@@ -54,7 +56,8 @@ public class User {
     }
 
     void setUsername(String username) {
-        this.username = username;
+        if (username != null && !username.isBlank())
+            this.username = username;
     }
 
     public String getBio() {
@@ -78,55 +81,34 @@ public class User {
     }
 
     void setToken(String token) {
-        this.token = token;
+        if (token != null && !token.isBlank())
+            this.token = token;
     }
 
-    void update(String username, String email, String password, boolean hasBio, String bio, boolean hasImage,
-            String image, String token) {
-        if (username != null)
-            this.setUsername(username);
-
-        if (email != null)
-            this.setEmail(email);
-
-        if (password != null)
-            this.setPassword(password);
-
+    void update(String username, String email, String password, String bio, boolean hasBio, String image,
+            boolean hasImage, String token) {
+        this.setUsername(username);
+        this.setEmail(email);
+        this.setPassword(password);
+        this.setToken(token);
         if (hasBio)
             this.setBio(bio);
-
         if (hasImage)
             this.setImage(image);
-
-        if (token != null)
-            this.setToken(token);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.id, this.username, this.email, this.password, this.token, this.bio, this.image);
+        return Objects.hash(this.id);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-
         if (!(obj instanceof User user))
             return false;
-
-        return Objects.equals(this.id, user.id) &&
-                Objects.equals(this.username, user.username) &&
-                Objects.equals(this.email, user.email) &&
-                Objects.equals(this.password, user.password) &&
-                Objects.equals(this.token, user.token) &&
-                Objects.equals(this.bio, user.bio) &&
-                Objects.equals(this.image, user.image);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Email: %s - Token: %s", email, token);
+        return Objects.equals(this.id, user.id);
     }
 
 }

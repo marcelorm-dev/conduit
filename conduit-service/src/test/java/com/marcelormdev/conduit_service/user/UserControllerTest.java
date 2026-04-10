@@ -25,19 +25,36 @@ class UserControllerTest extends ControllerTest {
         restCaller = new UserRestCaller(restClient);
     }
 
-    @Test
-    void login_returnsUserData_whenCredentialsAreValid() {
+    private void registerUser(String username, String email) {
         restCaller.callRegisterAPI("""
                         {
                             "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
+                                "username": "%s",
+                                "email": "%s",
+                                "password": "123456"
                             }
                         }
-                """)
+                """.formatted(username, email))
                 .expectStatus().isCreated();
+    }
+
+    private void registerUser(String username, String email, String bio) {
+        restCaller.callRegisterAPI("""
+                        {
+                            "user":{
+                                "username": "%s",
+                                "email": "%s",
+                                "password": "123456",
+                                "bio": "%s"
+                            }
+                        }
+                """.formatted(username, email, bio))
+                .expectStatus().isCreated();
+    }
+
+    @Test
+    void login_returnsUserData_whenCredentialsAreValid() {
+        registerUser("Jacob", "jake@hotmail.com", "I like barbecue");
 
         restCaller.callLoginAPI("""
                         {
@@ -59,17 +76,7 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void login_returns422_whenPasswordIsWrong() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
         restCaller.callLoginAPI("""
                         {
@@ -123,30 +130,10 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void listUsers_returnsAllUsers_whenTokenIsValid() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com", "I like barbecue");
+        registerUser("Joe", "joe@hotmail.com");
 
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Joe",
-                                "email": "joe@hotmail.com",
-                                "password": "654321"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
-
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callListUsersAPI(token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -161,17 +148,7 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void listUsers_returns401_whenTokenIsMissing() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
         restCaller.callListUsersAPI(null)
                 .expectStatus().isUnauthorized();
@@ -179,19 +156,9 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void getCurrentUser_returnsCurrentUser_whenTokenIsValid() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callCurrentUserAPI(token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -200,17 +167,7 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void getCurrentUser_returns401_whenTokenIsMissing() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
         restCaller.callCurrentUserAPI(null)
                 .expectStatus().isUnauthorized();
@@ -218,19 +175,9 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void update_returnsUpdatedUser_whenTokenIsValid() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456",
-                                "bio": "I like barbecue"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callUpdateUserAPI(token, """
                         {
                             "user":{
@@ -254,16 +201,7 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void update_returns401_whenTokenIsMissing() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
         restCaller.callUpdateUserAPI(null, """
                         {
@@ -279,18 +217,9 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void update_returns422_whenRequiredFieldsAreBlank() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
-        String token = jwtTokenService.generateToken("jake@hotmail.com");
+        String token = authService.generateToken("jake@hotmail.com");
         restCaller.callUpdateUserAPI(token, """
                         {
                             "user":{
@@ -305,16 +234,7 @@ class UserControllerTest extends ControllerTest {
 
     @Test
     void renewToken_returnsUserWithToken_whenEmailExists() {
-        restCaller.callRegisterAPI("""
-                        {
-                            "user":{
-                                "username": "Jacob",
-                                "email": "jake@hotmail.com",
-                                "password": "123456"
-                            }
-                        }
-                """)
-                .expectStatus().isCreated();
+        registerUser("Jacob", "jake@hotmail.com");
 
         restCaller.callRenewTokenAPI("""
                         {

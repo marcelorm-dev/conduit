@@ -59,7 +59,7 @@ class ProfileControllerTest extends ControllerTest {
         registerUser("prof", "prof@test.com");
         registerUser("celeb", "celeb@test.com");
 
-        String token = jwtTokenService.generateToken("prof@test.com");
+        String token = authService.generateToken("prof@test.com");
         profileRestCaller.callGetProfileAPI("celeb", token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -80,7 +80,7 @@ class ProfileControllerTest extends ControllerTest {
         registerUser("prof", "prof@test.com");
         registerUser("celeb", "celeb@test.com");
 
-        String token = jwtTokenService.generateToken("prof@test.com");
+        String token = authService.generateToken("prof@test.com");
         profileRestCaller.callFollowAPI("celeb", token)
                 .expectStatus().isOk()
                 .expectBody()
@@ -103,7 +103,7 @@ class ProfileControllerTest extends ControllerTest {
         registerUser("prof", "prof@test.com");
         registerUser("celeb", "celeb@test.com");
 
-        String token = jwtTokenService.generateToken("prof@test.com");
+        String token = authService.generateToken("prof@test.com");
         profileRestCaller.callFollowAPI("celeb", token);
 
         profileRestCaller.callUnfollowAPI("celeb", token)
@@ -128,7 +128,7 @@ class ProfileControllerTest extends ControllerTest {
         registerUser("prof", "prof@test.com");
         registerUser("celeb", "celeb@test.com");
 
-        String token = jwtTokenService.generateToken("prof@test.com");
+        String token = authService.generateToken("prof@test.com");
         profileRestCaller.callFollowAPI("celeb", token);
         profileRestCaller.callUnfollowAPI("celeb", token);
 

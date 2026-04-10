@@ -1,31 +1,24 @@
 package com.marcelormdev.conduit_service.profile;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.security.JwtTokenService;
-import com.marcelormdev.conduit_service.user.UserDTO;
-import com.marcelormdev.conduit_service.user.UserService;
+import com.marcelormdev.conduit_service.user.UserRegisteredEvent;
 
 @Service
 public class ProfileService {
 
-    private final ProfileRepository profileRepository;
-    private final UserService userService;
-    private final JwtTokenService jwtTokenService;
+    @Autowired
+    private ProfileRepository profileRepository;
 
-    ProfileService(ProfileRepository profileRepository, UserService userService, JwtTokenService jwtTokenService) {
-        this.profileRepository = profileRepository;
-        this.userService = userService;
-        this.jwtTokenService = jwtTokenService;
-    }
-
-    private Profile getAuthenticatedProfile(String token) {
-        UserDTO userDTO = userService.currentUser(token);
-        return profileRepository.findByUserEmail(userDTO.email()).get();
-    }
+    @Autowired
+    private AuthService authService;
 
     private Profile findByUsername(String username) {
         return profileRepository.findByUserUsername(username)
@@ -33,18 +26,21 @@ public class ProfileService {
     }
 
     @Transactional(readOnly = true)
-    public ProfileDTO getProfile(String username, String token) {
+    public ProfileResponse getProfile(String username, String token) {
         Profile targetProfile = findByUsername(username);
 
-        boolean following = token == null || !jwtTokenService.isTokenValid(token) ? false
-                : getAuthenticatedProfile(token).isFollowing(targetProfile);
+        boolean following = false;
+        if (token != null && authService.isTokenValid(token)) {
+            Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
+            following = currentUserProfile.isFollowing(targetProfile);
+        }
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
     }
 
     @Transactional
-    public ProfileDTO follow(String username, String token) {
-        Profile currentUserProfile = getAuthenticatedProfile(token);
+    public ProfileResponse follow(String username, String token) {
+        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.follow(targetProfile);
@@ -52,12 +48,12 @@ public class ProfileService {
 
         boolean following = currentUserProfile.isFollowing(targetProfile);
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
     }
 
     @Transactional
-    public ProfileDTO unfollow(String username, String token) {
-        Profile currentUserProfile = getAuthenticatedProfile(token);
+    public ProfileResponse unfollow(String username, String token) {
+        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.unfollow(targetProfile);
@@ -65,7 +61,13 @@ public class ProfileService {
 
         boolean following = currentUserProfile.isFollowing(targetProfile);
 
-        return ProfileDTO.of(targetProfile, following);
+        return new ProfileResponse(targetProfile, following);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onUserRegistered(UserRegisteredEvent event) {
+        Profile profile = new Profile(event.user());
+        profileRepository.save(profile);
     }
 
 }
