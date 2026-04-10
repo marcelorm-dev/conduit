@@ -85,35 +85,30 @@ public class User {
             this.token = token;
     }
 
-    void update(String username, String email, String password, String bio, String image, String token) {
+    void update(String username, String email, String password, String bio, boolean hasBio, String image,
+            boolean hasImage, String token) {
         this.setUsername(username);
         this.setEmail(email);
         this.setPassword(password);
         this.setToken(token);
-        this.setBio(bio);
-        this.setImage(image);
-
+        if (hasBio)
+            this.setBio(bio);
+        if (hasImage)
+            this.setImage(image);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.id, this.username, this.email, this.password, this.token, this.bio, this.image);
+        return Objects.hash(this.id);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-
         if (!(obj instanceof User user))
             return false;
-
         return Objects.equals(this.id, user.id);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Email: %s - Token: %s", email, token);
     }
 
 }

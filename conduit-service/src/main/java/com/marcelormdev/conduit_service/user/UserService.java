@@ -105,7 +105,9 @@ public class UserService {
                 request.user().email(),
                 request.user().password(),
                 request.user().bio(),
+                request.user().hasBio(),
                 request.user().image(),
+                request.user().hasImage(),
                 newToken);
 
         user = userRepository.save(user);

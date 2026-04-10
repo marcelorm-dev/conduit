@@ -271,11 +271,15 @@ class UserServiceTest {
 
     @Test
     void update_generatesNewToken_whenEmailIsUpdated() {
-        String token = registerUser("joe", "joe@gmail.com", "123456").user().token();
+        String token = registerUser("joe", "joe@gmail.com", "123456", "Some bio", "Some image").user().token();
         UserResponse response = updateUser(token, Map.of("email", "newemail@gmail.com"));
 
         assertEquals("newemail@gmail.com", response.user().email());
+        assertEquals("joe", response.user().username());
+        assertEquals("Some bio", response.user().bio());
+        assertEquals("Some image", response.user().image());
         assertNotEquals(token, response.user().token());
+
     }
 
     @Test
