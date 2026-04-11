@@ -31,7 +31,7 @@ public class ProfileService {
 
         boolean following = false;
         if (token != null && authService.isTokenValid(token)) {
-            Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
+            Profile currentUserProfile = authService.authenticateProfile(token);
             following = currentUserProfile.isFollowing(targetProfile);
         }
 
@@ -40,7 +40,7 @@ public class ProfileService {
 
     @Transactional
     public ProfileResponse follow(String username, String token) {
-        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
+        Profile currentUserProfile = authService.authenticateProfile(token);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.follow(targetProfile);
@@ -53,7 +53,7 @@ public class ProfileService {
 
     @Transactional
     public ProfileResponse unfollow(String username, String token) {
-        Profile currentUserProfile = authService.authenticate(token, profileRepository::findByUserEmail);
+        Profile currentUserProfile = authService.authenticateProfile(token);
         Profile targetProfile = findByUsername(username);
 
         currentUserProfile.unfollow(targetProfile);

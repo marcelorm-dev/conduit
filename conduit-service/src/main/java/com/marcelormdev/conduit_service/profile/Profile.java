@@ -28,10 +28,7 @@ public class Profile {
     private User user;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "profile_follows",
-            joinColumns = @JoinColumn(name = "follower_id"),
-            inverseJoinColumns = @JoinColumn(name = "followed_id"))
+    @JoinTable(name = "profile_follows", joinColumns = @JoinColumn(name = "follower_id"), inverseJoinColumns = @JoinColumn(name = "followed_id"))
     private Set<Profile> following = new HashSet<>();
 
     Profile() {
@@ -39,6 +36,10 @@ public class Profile {
 
     public Profile(User user) {
         this.user = user;
+    }
+
+    public User getUser() {
+        return this.user;
     }
 
     public String getUsername() {

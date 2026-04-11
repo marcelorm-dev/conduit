@@ -1,0 +1,247 @@
+package com.marcelormdev.conduit_service.article;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.marcelormdev.conduit_service.apitest.ArticleRestCaller;
+import com.marcelormdev.conduit_service.apitest.ControllerTest;
+import com.marcelormdev.conduit_service.apitest.UserRestCaller;
+import com.marcelormdev.conduit_service.profile.ProfileRepository;
+import com.marcelormdev.conduit_service.user.UserRepository;
+
+class ArticleControllerTest extends ControllerTest {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
+    private ArticleRepository articleRepository;
+
+    private UserRestCaller userRestCaller;
+    private ArticleRestCaller articleRestCaller;
+
+    @BeforeEach
+    void beforeEachTest() {
+        articleRepository.deleteAll();
+        profileRepository.deleteAll();
+        userRepository.deleteAll();
+        userRestCaller = new UserRestCaller(restClient);
+        articleRestCaller = new ArticleRestCaller(restClient);
+    }
+
+    private void registerUser(String username, String email) {
+        userRestCaller.callRegisterAPI("""
+                        {
+                            "user": {
+                                "username": "%s",
+                                "email": "%s",
+                                "password": "password123"
+                            }
+                        }
+                """.formatted(username, email))
+                .expectStatus().isCreated();
+    }
+
+    // --- Create Article ---
+
+    @Test
+    void createArticle_returnsArticleData_whenInputIsValid() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": ["tag1", "tag2"]
+                            }
+                        }
+                """)
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath("$.article.title").isEqualTo("Test Article")
+                .jsonPath("$.article.slug").isEmpty()
+                .jsonPath("$.article.description").isEqualTo("Test description")
+                .jsonPath("$.article.body").isEqualTo("Test body content")
+                .jsonPath("$.article.tagList[0]").isEqualTo("tag1")
+                .jsonPath("$.article.tagList[1]").isEqualTo("tag2")
+                .jsonPath("$.article.createdAt").isNotEmpty()
+                .jsonPath("$.article.favorited").isEqualTo(false)
+                .jsonPath("$.article.favoritesCount").isEqualTo(0)
+                .jsonPath("$.article.author.username").isEqualTo("author");
+    }
+
+    @Test
+    void createArticle_returns401_whenTokenIsMissing() {
+        articleRestCaller.callCreateArticleAPI(null, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isUnauthorized();
+    }
+
+    // --- Get Article ---
+
+    // Not yet implemented: GET /api/articles/:slug
+    //
+    // @Test
+    // void getArticle_returnsArticle_whenSlugExists() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // // create and capture slug, then:
+    // articleRestCaller.callGetArticleAPI(slug)
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.article.title").isEqualTo("Test Article")
+    // .jsonPath("$.article.slug").isEqualTo(slug)
+    // .jsonPath("$.article.description").isEqualTo("Test description")
+    // .jsonPath("$.article.body").isEqualTo("Test body content")
+    // .jsonPath("$.article.tagList").isArray()
+    // .jsonPath("$.article.createdAt").isNotEmpty()
+    // .jsonPath("$.article.favorited").isEqualTo(false)
+    // .jsonPath("$.article.favoritesCount").isEqualTo(0)
+    // .jsonPath("$.article.author.username").isEqualTo("author");
+    // }
+
+    // Not yet implemented: GET /api/articles/:slug
+    //
+    // @Test
+    // void getArticle_returns404_whenSlugNotFound() {
+    // articleRestCaller.callGetArticleAPI("non-existent-slug")
+    // .expectStatus().isNotFound()
+    // .expectBody()
+    // .jsonPath("$.errors.article[0]").isEqualTo("not found");
+    // }
+
+    // --- List Articles ---
+
+    // Not yet implemented: GET /api/articles
+    //
+    // @Test
+    // void listArticles_returnsArticleList_withoutAuth() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // // create an article first, then:
+    // articleRestCaller.callListArticlesAPI()
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.articles").isArray()
+    // .jsonPath("$.articlesCount").isNumber()
+    // .jsonPath("$.articles[0].body").doesNotExist()
+    // .jsonPath("$.articles[0].title").isNotEmpty()
+    // .jsonPath("$.articles[0].slug").isNotEmpty()
+    // .jsonPath("$.articles[0].author.username").isNotEmpty();
+    // }
+
+    // Not yet implemented: GET /api/articles
+    //
+    // @Test
+    // void listArticles_returnsArticleList_withAuth() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // articleRestCaller.callListArticlesAPI(token)
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.articles").isArray()
+    // .jsonPath("$.articlesCount").isNumber();
+    // }
+
+    // Not yet implemented: GET /api/articles?author=
+    //
+    // @Test
+    // void listArticles_filtersByAuthor() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // articleRestCaller.callListArticlesAPI("author=author", null)
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.articlesCount").isNumber()
+    // .jsonPath("$.articles[0].author.username").isEqualTo("author");
+    // }
+
+    // Not yet implemented: GET /api/articles?tag=
+    //
+    // @Test
+    // void listArticles_filtersByTag() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // articleRestCaller.callListArticlesAPI("tag=tag1", null)
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.articlesCount").isNumber()
+    // .jsonPath("$.articles[0].tagList").isArray();
+    // }
+
+    // --- Update Article ---
+
+    // Not yet implemented: PUT /api/articles/:slug
+    //
+    // @Test
+    // void updateArticle_returnsUpdatedArticle_whenTokenIsValid() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // // create an article and capture slug, then:
+    // articleRestCaller.callUpdateArticleAPI(slug, token, """
+    // {
+    // "article": {
+    // "body": "Updated body content"
+    // }
+    // }
+    // """)
+    // .expectStatus().isOk()
+    // .expectBody()
+    // .jsonPath("$.article.body").isEqualTo("Updated body content")
+    // .jsonPath("$.article.title").isEqualTo("Test Article")
+    // .jsonPath("$.article.tagList").isArray();
+    // }
+
+    // Not yet implemented: PUT /api/articles/:slug
+    //
+    // @Test
+    // void updateArticle_returns401_whenTokenIsMissing() {
+    // articleRestCaller.callUpdateArticleAPI("some-slug", null, """
+    // {
+    // "article": {
+    // "body": "Updated body content"
+    // }
+    // }
+    // """)
+    // .expectStatus().isUnauthorized();
+    // }
+
+    // --- Delete Article ---
+
+    // Not yet implemented: DELETE /api/articles/:slug
+    //
+    // @Test
+    // void deleteArticle_returns204_whenTokenIsValid() {
+    // registerUser("author", "author@test.com");
+    // String token = authService.generateToken("author@test.com");
+    // // create an article and capture slug, then:
+    // articleRestCaller.callDeleteArticleAPI(slug, token)
+    // .expectStatus().isNoContent();
+    // articleRestCaller.callGetArticleAPI(slug)
+    // .expectStatus().isNotFound();
+    // }
+
+    // Not yet implemented: DELETE /api/articles/:slug
+    //
+    // @Test
+    // void deleteArticle_returns401_whenTokenIsMissing() {
+    // articleRestCaller.callDeleteArticleAPI("some-slug", null)
+    // .expectStatus().isUnauthorized();
+    // }
+
+}

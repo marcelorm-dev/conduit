@@ -25,7 +25,7 @@ public class UserService {
     private AuthService authService;
 
     public UserResponse currentUser(String token) {
-        User user = authService.authenticate(token, userRepository::findByEmail);
+        User user = authService.authenticateUser(token);
         return new UserResponse(user);
     }
 
@@ -82,7 +82,7 @@ public class UserService {
 
     @Transactional
     public UserResponse update(String token, UpdateUserRequest request) {
-        User user = authService.authenticate(token, userRepository::findByEmail);
+        User user = authService.authenticateUser(token);
 
         String username = request.user().username();
         String email = request.user().email();
@@ -114,7 +114,7 @@ public class UserService {
     }
 
     public List<UserResponse> getAllUsers(String token) {
-        authService.authenticate(token, userRepository::findByEmail);
+        authService.authenticateUser(token);
         return userRepository.findAll().stream().map(UserResponse::new).toList();
     }
 

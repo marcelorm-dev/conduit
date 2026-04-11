@@ -19,5 +19,8 @@ public class ErrorMessages {
     public static final String TOKEN_INVALID_OR_EXPIRED = "Token is invalid or expired";
     public static final String USERNAME_NOT_INFORMED = "Username must be informed";
     public static final String USERNAME_NOT_FOUND = "Username not found";
+    public static final String TITLE_MUST_BE_INFORMED = "Title must be informed";
+    public static final String DESCRIPTION_MUST_BE_INFORMED = "Description must be informed";
+    public static final String BODY_MUST_BE_INFORMED = "Body must be informed";
 
 }
