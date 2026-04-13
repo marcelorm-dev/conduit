@@ -13,13 +13,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.user.RegisterUserRequest;
 import com.marcelormdev.conduit_service.user.UserResponse;
 import com.marcelormdev.conduit_service.user.UserRepository;
 import com.marcelormdev.conduit_service.user.UserService;
 import com.marcelormdev.conduit_service.user.UserServiceTestHelper;
-
-import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 class ProfileServiceTest {

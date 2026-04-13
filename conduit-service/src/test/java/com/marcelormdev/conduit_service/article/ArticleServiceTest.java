@@ -6,15 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.profile.Profile;
 import com.marcelormdev.conduit_service.profile.ProfileRepository;
 import com.marcelormdev.conduit_service.user.UserRepository;
 import com.marcelormdev.conduit_service.user.UserService;
@@ -60,8 +65,6 @@ class ArticleServiceTest {
                 new String[] { "tag1", "tag2" }));
     }
 
-    // --- Create Article ---
-
     @Test
     void create_returnsArticle_whenInputIsValid() {
         String token = registerUserAndGetToken("author", "author@test.com");
@@ -83,9 +86,9 @@ class ArticleServiceTest {
     void create_throwsException_whenTokenIsNullOrBlank() {
         String[] nullOrBlanks = new String[] { null, " " };
 
-        for (String token : nullOrBlanks) {
+        for (String nullOrBlank : nullOrBlanks) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                    () -> createArticle(token));
+                    () -> createArticle(nullOrBlank));
             assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
@@ -183,49 +186,61 @@ class ArticleServiceTest {
     // exception.getMessagesAsString());
     // }
 
-    // --- List Articles ---
+    @Test
+    void list_returnsAllArticles_withoutFilters() {
+        String token = registerUserAndGetToken("author", "author@test.com");
+        createArticle(token);
 
-    // Not yet implemented: articleService.list(author, tag, token)
-    //
-    // @Test
-    // void list_returnsAllArticles_withoutFilters() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // createArticle(token);
-    //
-    // List<ArticleResponse> articles = articleService.list(null, null, null);
-    //
-    // assertFalse(articles.isEmpty());
-    // }
+        List<ArticleResponse> articles = articleService.list(token, null, null, null);
 
-    // Not yet implemented: articleService.list(author, tag, token)
-    //
-    // @Test
-    // void list_filtersByAuthor() {
-    // String token1 = registerAndGetToken("author1", "author1@test.com");
-    // String token2 = registerAndGetToken("author2", "author2@test.com");
-    // createArticle(token1);
-    // createArticle(token2);
-    //
-    // List<ArticleResponse> articles = articleService.list("author1", null, null);
-    //
-    // assertEquals(1, articles.size());
-    // assertEquals("author1", articles.get(0).article().author().username());
-    // }
+        assertFalse(articles.isEmpty());
+    }
 
-    // Not yet implemented: articleService.list(author, tag, token)
-    //
-    // @Test
-    // void list_filtersByTag() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // articleService.create(token, new CreateArticleRequest("A", "d", "b", new
-    // String[]{"java"}));
-    // articleService.create(token, new CreateArticleRequest("B", "d", "b", new
-    // String[]{"python"}));
-    //
-    // List<ArticleResponse> articles = articleService.list(null, "java", null);
-    //
-    // assertEquals(1, articles.size());
-    // }
+    @Test
+    void list_filtersByAuthor() {
+        String token1 = registerUserAndGetToken("author1", "author1@test.com");
+        String token2 = registerUserAndGetToken("author2", "author2@test.com");
+        createArticle(token1);
+        createArticle(token2);
+
+        List<ArticleResponse> articles = articleService.list(token1, "author1", null, null);
+
+        assertEquals(1, articles.size());
+        assertEquals("author1", articles.get(0).article().author().username());
+    }
+
+    @Test
+    void list_filtersByTag() {
+        String token = registerUserAndGetToken("author", "author@test.com");
+        articleService.create(token, new CreateArticleRequest("A", "d", "b", new String[] { "java" }));
+        articleService.create(token, new CreateArticleRequest("B", "d", "b", new String[] { "python" }));
+
+        List<ArticleResponse> articles = articleService.list(token, null, "java", null);
+
+        assertEquals(1, articles.size());
+    }
+
+    @Test
+    @Transactional
+    void list_filtersByFavoritedBy() {
+        String authorToken = registerUserAndGetToken("author", "author@test.com");
+        articleService.create(authorToken, new CreateArticleRequest("Favorited Article", "desc", "body", new String[] {}));
+        articleService.create(authorToken, new CreateArticleRequest("Not Favorited", "desc", "body", new String[] {}));
+
+        String visitorToken = userServiceHelper.registerUser("visitor", "visitor@test.com", "123456").user().token();
+        Profile visitorProfile = profileRepository.findByUserUsername("visitor").orElseThrow();
+
+        Article toFavorite = articleRepository.findAll().stream()
+                .filter(a -> a.getTitle().equals("Favorited Article"))
+                .findFirst().orElseThrow();
+        toFavorite.addFavorited(visitorProfile);
+
+        List<ArticleResponse> articles = articleService.list(visitorToken, null, null, true);
+
+        assertEquals(1, articles.size());
+        assertEquals("Favorited Article", articles.get(0).article().title());
+        assertTrue(articles.get(0).article().favorited());
+    }
 
     // Not yet implemented: response should not include body in list
     //

@@ -2,9 +2,11 @@ package com.marcelormdev.conduit_service.article;
 
 import java.time.Instant;
 
+import com.marcelormdev.conduit_service.profile.Profile;
+
 public record ArticleResponse(Params article) {
 
-        public ArticleResponse(Article article) {
+        public ArticleResponse(Article article, Profile currentUserProfile) {
                 this(new Params(
                                 article.getSlug(),
                                 article.getTitle(),
@@ -13,12 +15,12 @@ public record ArticleResponse(Params article) {
                                 article.getTagList(),
                                 article.getCreatedAt(),
                                 article.getUpdatedAt(),
-                                article.isFavorited(),
+                                article.isFavoritedBy(currentUserProfile),
                                 article.getFavoritesCount(),
                                 new AuthorParams(
-                                                article.getProfile().getUsername(),
-                                                article.getProfile().getBio(),
-                                                article.getProfile().getImage(),
+                                                article.getAuthor().getUsername(),
+                                                article.getAuthor().getBio(),
+                                                article.getAuthor().getImage(),
                                                 false)));
         }
 

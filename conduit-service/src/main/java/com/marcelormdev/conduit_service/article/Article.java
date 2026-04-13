@@ -1,7 +1,10 @@
 package com.marcelormdev.conduit_service.article;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import com.marcelormdev.conduit_service.profile.Profile;
 
@@ -11,6 +14,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
@@ -27,15 +32,18 @@ class Article {
     private String[] tagList;
     private Instant createdAt;
     private Instant updatedAt;
-    private Boolean favorited;
-    private Integer favoritesCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id")
-    private Profile profile;
+    private Profile author;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "article_favorites", joinColumns = @JoinColumn(name = "article_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
+    private Set<Profile> favoritedBy;
 
     Article() {
         this.createdAt = Instant.now();
+        this.favoritedBy = new HashSet<>();
     }
 
     Article(String title, String description, String body, String[] tagList, Profile profile) {
@@ -44,9 +52,7 @@ class Article {
         this.description = description;
         this.body = body;
         this.tagList = tagList;
-        this.profile = profile;
-        this.favorited = false;
-        this.favoritesCount = 0;
+        this.author = profile;
     }
 
     String getSlug() {
@@ -101,29 +107,28 @@ class Article {
         this.updatedAt = updatedAt;
     }
 
-    Boolean isFavorited() {
-        return favorited;
+    Boolean isFavoritedBy(Profile profile) {
+        return favoritedBy.contains(profile);
     }
 
-    void setFavorited(Boolean favorited) {
-        this.favorited = favorited;
+    void addFavorited(Profile profile) {
+        this.favoritedBy.add(profile);
     }
 
     Integer getFavoritesCount() {
-        return favoritesCount;
+        return this.favoritedBy.size();
     }
 
-    void addFavorites() {
-        this.favoritesCount = favoritesCount + 1;
+    Profile getAuthor() {
+        return author;
     }
 
-    void subtractFavorites() {
-        if (this.favoritesCount > 0)
-            this.favoritesCount = favoritesCount - 1;
+    boolean isAuthoredBy(String username) {
+        return username != null && !username.isBlank() && this.author.getUsername().equals(username);
     }
 
-    Profile getProfile() {
-        return profile;
+    boolean hasTag(String tag) {
+        return tag != null && !tag.isBlank() && Arrays.asList(this.tagList).contains(tag);
     }
 
     @Override
