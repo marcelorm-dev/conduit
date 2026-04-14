@@ -46,8 +46,6 @@ class ArticleControllerTest extends ControllerTest {
                 .expectStatus().isCreated();
     }
 
-    // --- Create Article ---
-
     @Test
     void createArticle_returnsArticleData_whenInputIsValid() {
         registerUser("author", "author@test.com");
@@ -129,6 +127,50 @@ class ArticleControllerTest extends ControllerTest {
                 .expectStatus().isNotFound()
                 .expectBody()
                 .jsonPath("$.errors.article[0]").isEqualTo("not found");
+    }
+
+    @Test
+    void favoriteArticle_returnsArticle_withFavoritedTrue_whenTokenIsValid() {
+        registerUser("author", "author@test.com");
+        String authorToken = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+
+        articleRestCaller.callFavoriteArticleAPI("test-article", readerToken)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.article.slug").isEqualTo("test-article")
+                .jsonPath("$.article.favorited").isEqualTo(true)
+                .jsonPath("$.article.favoritesCount").isEqualTo(1);
+    }
+
+    @Test
+    void favoriteArticle_returns401_whenTokenIsMissing() {
+        articleRestCaller.callFavoriteArticleAPI("test-article", null)
+                .expectStatus()
+                .isUnauthorized();
+    }
+
+    @Test
+    void favoriteArticle_returns404_whenSlugNotFound() {
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+
+        articleRestCaller.callFavoriteArticleAPI("non-existent-slug", readerToken)
+                .expectStatus().isNotFound();
     }
 
     // --- List Articles ---

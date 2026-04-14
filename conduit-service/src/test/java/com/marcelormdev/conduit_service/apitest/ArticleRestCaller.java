@@ -39,6 +39,10 @@ public class ArticleRestCaller {
         return restCaller.put("/api/articles/" + slug, token, body);
     }
 
+    public RestTestClient.ResponseSpec callFavoriteArticleAPI(String slug, String token) {
+        return restCaller.post("/api/articles/" + slug + "/favorite", token, null);
+    }
+
     public RestTestClient.ResponseSpec callDeleteArticleAPI(String slug, String token) {
         return restCaller.delete("/api/articles/" + slug, token);
     }

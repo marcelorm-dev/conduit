@@ -34,6 +34,12 @@ public class ArticleController {
         return articleService.getBySlug(slug);
     }
 
+    @PostMapping("/api/articles/{slug}/favorite")
+    public ArticleResponse favorite(@RequestHeader HttpHeaders headers, @PathVariable String slug) {
+        String token = new AuthorizationHeader(headers).getToken();
+        return articleService.favorite(token, slug);
+    }
+
     // Update Article - PUT /api/articles/:slug
 
     // Delete Article - DELETE /api/articles/:slug
