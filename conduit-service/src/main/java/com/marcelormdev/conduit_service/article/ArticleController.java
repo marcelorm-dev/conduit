@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -27,7 +29,10 @@ public class ArticleController {
         return articleService.create(token, request);
     }
 
-    // Get Article - GET /api/articles/:slug
+    @GetMapping("/api/articles/{slug}")
+    public ArticleResponse getArticle(@PathVariable String slug) {
+        return articleService.getBySlug(slug);
+    }
 
     // Update Article - PUT /api/articles/:slug
 

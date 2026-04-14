@@ -35,4 +35,8 @@ public class ArticleServiceTestHelper {
         return token;
     }
 
+    public String getSlug() {
+        return articleResponse.article().slug();
+    }
+
 }

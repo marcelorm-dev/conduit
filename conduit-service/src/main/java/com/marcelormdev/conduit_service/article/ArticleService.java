@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.marcelormdev.conduit_service.auth.AuthService;
+import com.marcelormdev.conduit_service.common.exception.ArticleNotFoundException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
 import com.marcelormdev.conduit_service.common.validation.Validator;
@@ -27,7 +28,8 @@ public class ArticleService {
 
         new Validator()
                 .notNullOrBlank(request.article().title(), ErrorMessages.TITLE_MUST_BE_INFORMED)
-                .notNullOrBlank(request.article().description(), ErrorMessages.DESCRIPTION_MUST_BE_INFORMED)
+                .notNullOrBlank(request.article().description(),
+                        ErrorMessages.DESCRIPTION_MUST_BE_INFORMED)
                 .notNullOrBlank(request.article().body(), ErrorMessages.BODY_MUST_BE_INFORMED)
                 .throwViolations(FieldValidationException::new);
 
@@ -44,19 +46,27 @@ public class ArticleService {
     }
 
     @Transactional
-    public ArticleResponse favorite(String token, String articleSlug) {
+    public ArticleResponse favorite(String token, String slug) {
         Profile currentUserProfile = authService.authenticateProfile(token);
 
-        new Validator()
-                .notNullOrBlank(articleSlug, ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED)
-                .throwViolations(FieldValidationException::new);
-
-        Article article = articleRepository.findBySlug(articleSlug)
-                .orElseThrow(() -> new FieldValidationException(ErrorMessages.ARTICLE_NOT_FOUND));
-
+        Article article = findBySlug(slug);
         article.addFavorited(currentUserProfile);
 
         return new ArticleResponse(article, currentUserProfile);
+    }
+
+    private Article findBySlug(String slug) {
+        new Validator()
+                .notNullOrBlank(slug, ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED)
+                .throwViolations(FieldValidationException::new);
+
+        return articleRepository.findBySlug(slug)
+                .orElseThrow(ArticleNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public ArticleResponse getBySlug(String slug) {
+        return new ArticleResponse(findBySlug(slug));
     }
 
     @Transactional(readOnly = true)

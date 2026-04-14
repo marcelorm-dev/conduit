@@ -92,38 +92,44 @@ class ArticleControllerTest extends ControllerTest {
                 .expectStatus().isUnauthorized();
     }
 
-    // --- Get Article ---
+    @Test
+    void getArticle_returnsArticle_whenSlugExists() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
 
-    // Not yet implemented: GET /api/articles/:slug
-    //
-    // @Test
-    // void getArticle_returnsArticle_whenSlugExists() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // // create and capture slug, then:
-    // articleRestCaller.callGetArticleAPI(slug)
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.article.title").isEqualTo("Test Article")
-    // .jsonPath("$.article.slug").isEqualTo(slug)
-    // .jsonPath("$.article.description").isEqualTo("Test description")
-    // .jsonPath("$.article.body").isEqualTo("Test body content")
-    // .jsonPath("$.article.tagList").isArray()
-    // .jsonPath("$.article.createdAt").isNotEmpty()
-    // .jsonPath("$.article.favorited").isEqualTo(false)
-    // .jsonPath("$.article.favoritesCount").isEqualTo(0)
-    // .jsonPath("$.article.author.username").isEqualTo("author");
-    // }
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": ["tag1", "tag2"]
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
 
-    // Not yet implemented: GET /api/articles/:slug
-    //
-    // @Test
-    // void getArticle_returns404_whenSlugNotFound() {
-    // articleRestCaller.callGetArticleAPI("non-existent-slug")
-    // .expectStatus().isNotFound()
-    // .expectBody()
-    // .jsonPath("$.errors.article[0]").isEqualTo("not found");
-    // }
+        articleRestCaller.callGetArticleAPI("test-article")
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.article.title").isEqualTo("Test Article")
+                .jsonPath("$.article.slug").isEqualTo("test-article")
+                .jsonPath("$.article.description").isEqualTo("Test description")
+                .jsonPath("$.article.body").isEqualTo("Test body content")
+                .jsonPath("$.article.tagList").isArray()
+                .jsonPath("$.article.createdAt").isNotEmpty()
+                .jsonPath("$.article.favorited").isEqualTo(false)
+                .jsonPath("$.article.favoritesCount").isEqualTo(0)
+                .jsonPath("$.article.author.username").isEqualTo("author");
+    }
+
+    @Test
+    void getArticle_returns404_whenSlugNotFound() {
+        articleRestCaller.callGetArticleAPI("non-existent-slug")
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.errors.article[0]").isEqualTo("not found");
+    }
 
     // --- List Articles ---
 

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.marcelormdev.conduit_service.common.exception.ArticleNotFoundException;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
@@ -139,39 +140,30 @@ class ArticleServiceTest {
         assertEquals(0, response.article().tagList().length);
     }
 
-    // --- Get Article by slug ---
+    @Test
+    void getBySlug_returnsArticle_whenSlugExists() {
+        String slug = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content", new String[] {}).getSlug();
 
-    // Not yet implemented: articleService.getBySlug(slug)
-    //
-    // @Test
-    // void getBySlug_returnsArticle_whenSlugExists() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // ArticleResponse created = createArticle(token);
-    // String slug = created.article().slug();
-    //
-    // ArticleResponse response = articleService.getBySlug(slug);
-    //
-    // assertEquals("Test Article", response.article().title());
-    // assertEquals(slug, response.article().slug());
-    // assertEquals("Test description", response.article().description());
-    // assertEquals("Test body content", response.article().body());
-    // assertEquals(2, response.article().tagList().length);
-    // assertFalse(response.article().favorited());
-    // assertEquals(0, response.article().favoritesCount());
-    // assertEquals("author", response.article().author().username());
-    // }
+        ArticleResponse response = articleService.getBySlug(slug);
 
-    // Not yet implemented: articleService.getBySlug(slug) — expected to throw when
-    // not found
-    //
-    // @Test
-    // void getBySlug_throwsException_whenSlugNotFound() {
-    // FieldValidationException exception =
-    // assertThrowsExactly(FieldValidationException.class,
-    // () -> articleService.getBySlug("non-existent-slug"));
-    // assertEquals(ErrorMessages.ARTICLE_NOT_FOUND,
-    // exception.getMessagesAsString());
-    // }
+        assertEquals("Test Article", response.article().title());
+        assertEquals(slug, response.article().slug());
+        assertEquals("Test description", response.article().description());
+        assertEquals("Test body content", response.article().body());
+        assertEquals(0, response.article().tagList().length);
+        assertFalse(response.article().favorited());
+        assertEquals(0, response.article().favoritesCount());
+        assertEquals("author", response.article().author().username());
+    }
+
+    @Test
+    void getBySlug_throwsException_whenSlugNotFound() {
+        ArticleNotFoundException exception = assertThrowsExactly(ArticleNotFoundException.class,
+                () -> articleService.getBySlug("non-existent-slug"));
+        assertEquals(ErrorMessages.ARTICLE_NOT_FOUND,
+                exception.getMessagesAsString());
+    }
 
     @Test
     void list_returnsAllArticles_withoutFilters() {
@@ -226,6 +218,7 @@ class ArticleServiceTest {
         assertEquals(1, articles.size());
         assertEquals("Favorited", articles.get(0).article().title());
         assertTrue(articles.get(0).article().favorited());
+        assertEquals(1, articles.get(0).article().favoritesCount());
     }
 
     @Test

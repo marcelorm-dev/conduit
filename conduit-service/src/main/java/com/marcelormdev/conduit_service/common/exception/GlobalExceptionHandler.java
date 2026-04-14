@@ -20,6 +20,12 @@ public class GlobalExceptionHandler {
         }
     }
 
+    private record ArticleBodyResponse(ArticleErrorsResponse errors) {
+        private record ArticleErrorsResponse(List<String> article) {
+
+        }
+    }
+
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(AuthenticationException.class)
     public BodyResponse handleAuthenticationException(AuthenticationException ex) {
@@ -30,6 +36,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FieldValidationException.class)
     public BodyResponse handleRequestFieldValidationException(FieldValidationException ex) {
         return BodyResponse.of(ex.getMessages());
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(ArticleNotFoundException.class)
+    public ArticleBodyResponse handleArticleNotFoundException(ArticleNotFoundException ex) {
+        return new ArticleBodyResponse(new ArticleBodyResponse.ArticleErrorsResponse(ex.getMessages()));
     }
 
 }
