@@ -66,7 +66,7 @@ class ArticleControllerTest extends ControllerTest {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.article.title").isEqualTo("Test Article")
-                .jsonPath("$.article.slug").isEmpty()
+                .jsonPath("$.article.slug").isNotEmpty()
                 .jsonPath("$.article.description").isEqualTo("Test description")
                 .jsonPath("$.article.body").isEqualTo("Test body content")
                 .jsonPath("$.article.tagList[0]").isEqualTo("tag1")

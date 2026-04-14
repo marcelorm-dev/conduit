@@ -29,7 +29,7 @@ class Article {
     private String title;
     private String description;
     private String body;
-    private String[] tagList;
+    private String[] tags;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -46,21 +46,25 @@ class Article {
         this.favoritedBy = new HashSet<>();
     }
 
-    Article(String title, String description, String body, String[] tagList, Profile profile) {
+    Article(String title, String description, String body, String[] tags, Profile profile) {
         this();
         this.title = title;
+        this.slug = generateSlug(title);
         this.description = description;
         this.body = body;
-        this.tagList = tagList;
+        this.tags = tags;
         this.author = profile;
+    }
+
+    private String generateSlug(String title) {
+        return title.toLowerCase()
+                .replaceAll("[^a-z0-9\\s-]", "")
+                .trim()
+                .replaceAll("[\\s]+", "-");
     }
 
     String getSlug() {
         return slug;
-    }
-
-    void setSlug(String slug) {
-        this.slug = slug;
     }
 
     String getTitle() {
@@ -87,12 +91,12 @@ class Article {
         this.body = body;
     }
 
-    String[] getTagList() {
-        return tagList;
+    String[] getTags() {
+        return tags;
     }
 
-    void setTagList(String[] tagList) {
-        this.tagList = tagList;
+    void setTags(String[] tagList) {
+        this.tags = tagList;
     }
 
     Instant getCreatedAt() {
@@ -128,7 +132,7 @@ class Article {
     }
 
     boolean hasTag(String tag) {
-        return tag != null && !tag.isBlank() && Arrays.asList(this.tagList).contains(tag);
+        return tag != null && !tag.isBlank() && Arrays.asList(this.tags).contains(tag);
     }
 
     @Override

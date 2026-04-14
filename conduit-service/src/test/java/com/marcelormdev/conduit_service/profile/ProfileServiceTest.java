@@ -13,21 +13,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.helpers.TestHelper;
 import com.marcelormdev.conduit_service.user.UserResponse;
 import com.marcelormdev.conduit_service.user.UserRepository;
-import com.marcelormdev.conduit_service.user.UserService;
-import com.marcelormdev.conduit_service.user.UserServiceTestHelper;
 
 @SpringBootTest
 class ProfileServiceTest {
 
     @Autowired
-    private ProfileService profileService;
+    private TestHelper helper;
 
     @Autowired
-    private UserService userService;
-
-    private UserServiceTestHelper userServiceHelper;
+    private ProfileService profileService;
 
     @Autowired
     private UserRepository userRepository;
@@ -37,18 +34,13 @@ class ProfileServiceTest {
 
     @BeforeEach
     void beforeEachTest() {
-        userServiceHelper = new UserServiceTestHelper(userService);
         profileRepository.deleteAll();
         userRepository.deleteAll();
     }
 
-    private UserResponse registerUser(String username, String email, String password) {
-        return userServiceHelper.registerUser(username, email, password);
-    }
-
     @Test
     void getProfile_returnsProfile_withoutToken() {
-        registerUser("celeb", "celeb@test.com", "123456");
+        helper.register("celeb", "celeb@test.com", "123456");
 
         ProfileResponse response = profileService.getProfile("celeb", null);
 
@@ -58,8 +50,8 @@ class ProfileServiceTest {
 
     @Test
     void getProfile_returnsProfileWithFollowingFalse_whenAuthenticatedButNotFollowing() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
-        registerUser("celeb", "celeb@test.com", "654321");
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         ProfileResponse response = profileService.getProfile("celeb", token);
 
@@ -69,8 +61,8 @@ class ProfileServiceTest {
 
     @Test
     void getProfile_returnsProfileWithFollowingTrue_whenAuthenticatedAndFollowing() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
-        registerUser("celeb", "celeb@test.com", "654321");
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileService.follow("celeb", token);
         ProfileResponse response = profileService.getProfile("celeb", token);
@@ -81,7 +73,7 @@ class ProfileServiceTest {
 
     @Test
     void getProfile_returnsFollowingFalse_whenTokenIsInvalid() {
-        registerUser("celeb", "celeb@test.com", "654321");
+        helper.register("celeb", "celeb@test.com", "654321");
 
         ProfileResponse response = profileService.getProfile("celeb", "invalid-token");
 
@@ -91,8 +83,8 @@ class ProfileServiceTest {
 
     @Test
     void getProfile_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
-        UserResponse prof = registerUser("prof", "prof@test.com", "123456");
-        registerUser("celeb", "celeb@test.com", "654321");
+        UserResponse prof = helper.register("prof", "prof@test.com", "123456").getUserResponse();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileRepository.findByUserEmail(prof.user().email()).ifPresent(profileRepository::delete);
 
@@ -112,8 +104,8 @@ class ProfileServiceTest {
 
     @Test
     void follow_returnsProfileWithFollowingTrue_whenDatasAreValid() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
-        registerUser("celeb", "celeb@test.com", "654321");
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         ProfileResponse response = profileService.follow("celeb", token);
 
@@ -123,8 +115,8 @@ class ProfileServiceTest {
 
     @Test
     void follow_persistsFollowRelationship() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
-        registerUser("celeb", "celeb@test.com", "654321");
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileService.follow("celeb", token);
         ProfileResponse response = profileService.getProfile("celeb", token);
@@ -134,7 +126,7 @@ class ProfileServiceTest {
 
     @Test
     void follow_throwsException_whenTokenIsNullOrBlank() {
-        registerUser("celeb", "celeb@test.com", "654321");
+        helper.register("celeb", "celeb@test.com", "654321");
 
         String[] nullOrBlankTokens = new String[] { null, " " };
         for (String token : nullOrBlankTokens) {
@@ -147,7 +139,7 @@ class ProfileServiceTest {
 
     @Test
     void follow_throwsException_whenTokenIsInvalid() {
-        registerUser("celeb", "celeb@test.com", "654321");
+        helper.register("celeb", "celeb@test.com", "654321");
 
         String invalidToken = "aaaaaaa";
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
@@ -158,7 +150,7 @@ class ProfileServiceTest {
 
     @Test
     void follow_throwsException_whenUsernameNotFound() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                 () -> profileService.follow("unknown", token));
@@ -168,8 +160,8 @@ class ProfileServiceTest {
 
     @Test
     void follow_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
-        UserResponse prof = registerUser("prof", "prof@test.com", "123456");
-        registerUser("celeb", "celeb@test.com", "654321");
+        UserResponse prof = helper.register("prof", "prof@test.com", "123456").getUserResponse();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileRepository.findByUserEmail(prof.user().email()).ifPresent(profileRepository::delete);
 
@@ -181,8 +173,8 @@ class ProfileServiceTest {
 
     @Test
     void unfollow_returnsProfileWithFollowingFalse_whenDatasAreValid() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
-        registerUser("celeb", "celeb@test.com", "654321");
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileService.follow("celeb", token);
         profileService.unfollow("celeb", token);
@@ -215,7 +207,7 @@ class ProfileServiceTest {
 
     @Test
     void unfollow_throwsException_whenUsernameNotFound() {
-        String token = registerUser("prof", "prof@test.com", "123456").user().token();
+        String token = helper.register("prof", "prof@test.com", "123456").getToken();
 
         FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
                 () -> profileService.unfollow("unknown", token));
@@ -225,8 +217,8 @@ class ProfileServiceTest {
 
     @Test
     void unfollow_throwsAuthenticationException_whenProfileNotFoundForAuthenticatedUser() {
-        UserResponse prof = registerUser("prof", "prof@test.com", "123456");
-        registerUser("celeb", "celeb@test.com", "654321");
+        UserResponse prof = helper.register("prof", "prof@test.com", "123456").getUserResponse();
+        helper.register("celeb", "celeb@test.com", "654321");
 
         profileRepository.findByUserEmail(prof.user().email()).ifPresent(profileRepository::delete);
 

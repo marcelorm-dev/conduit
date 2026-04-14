@@ -12,7 +12,7 @@ public record ArticleResponse(Params article) {
                                 article.getTitle(),
                                 article.getDescription(),
                                 article.getBody(),
-                                article.getTagList(),
+                                article.getTags(),
                                 article.getCreatedAt(),
                                 article.getUpdatedAt(),
                                 article.isFavoritedBy(currentUserProfile),

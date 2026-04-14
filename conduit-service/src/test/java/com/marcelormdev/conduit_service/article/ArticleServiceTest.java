@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,19 +14,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
-import com.marcelormdev.conduit_service.profile.Profile;
+import com.marcelormdev.conduit_service.helpers.UserServiceTestHelper;
+import com.marcelormdev.conduit_service.helpers.TestHelper;
+
 import com.marcelormdev.conduit_service.profile.ProfileRepository;
 import com.marcelormdev.conduit_service.user.UserRepository;
-import com.marcelormdev.conduit_service.user.UserService;
-import com.marcelormdev.conduit_service.user.UserServiceTestHelper;
 
 @SpringBootTest
 class ArticleServiceTest {
+
+    @Autowired
+    private TestHelper helper;
 
     @Autowired
     private ArticleService articleService;
@@ -40,42 +42,25 @@ class ArticleServiceTest {
     @Autowired
     private ProfileRepository profileRepository;
 
-    @Autowired
-    private UserService userService;
-
-    private UserServiceTestHelper userServiceHelper;
-
     @BeforeEach
     void beforeEachTest() {
         articleRepository.deleteAll();
         profileRepository.deleteAll();
         userRepository.deleteAll();
-        userServiceHelper = new UserServiceTestHelper(userService);
-    }
-
-    private String registerUserAndGetToken(String username, String email) {
-        return userServiceHelper.registerUser(username, email, "password123").user().token();
-    }
-
-    private ArticleResponse createArticle(String token) {
-        return articleService.create(token, new CreateArticleRequest(
-                "Test Article",
-                "Test description",
-                "Test body content",
-                new String[] { "tag1", "tag2" }));
     }
 
     @Test
     void create_returnsArticle_whenInputIsValid() {
-        String token = registerUserAndGetToken("author", "author@test.com");
-
-        ArticleResponse response = createArticle(token);
+        ArticleResponse response = helper
+                .register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content", new String[] { "tag1", "tag2" })
+                .getArticleResponse();
 
         assertEquals("Test Article", response.article().title());
         assertEquals("Test description", response.article().description());
         assertEquals("Test body content", response.article().body());
         assertArrayEquals(new String[] { "tag1", "tag2" }, response.article().tagList());
-        assertNull(response.article().slug());
+        assertTrue(response.article().slug().contains("test-article"));
         assertNotNull(response.article().createdAt());
         assertFalse(response.article().favorited());
         assertEquals(0, response.article().favoritesCount());
@@ -88,7 +73,8 @@ class ArticleServiceTest {
 
         for (String nullOrBlank : nullOrBlanks) {
             AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                    () -> createArticle(nullOrBlank));
+                    () -> articleService.create(nullOrBlank,
+                            new CreateArticleRequest("Title", "Desc", "Body", new String[] {})));
             assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
         }
     }
@@ -96,13 +82,14 @@ class ArticleServiceTest {
     @Test
     void create_throwsException_whenTokenIsInvalid() {
         AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
-                () -> createArticle("invalid-token"));
+                () -> articleService.create("invalid-token",
+                        new CreateArticleRequest("Title", "Desc", "Body", new String[] {})));
         assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
     }
 
     @Test
     void create_throwsException_whenTitleIsNullOrBlank() {
-        String token = registerUserAndGetToken("author", "author@test.com");
+        String token = helper.register("author", "author@test.com", "123456").getToken();
 
         String[] nullOrBlanks = new String[] { null, " " };
 
@@ -116,7 +103,7 @@ class ArticleServiceTest {
 
     @Test
     void create_throwsException_whenDescriptionIsNullOrBlank() {
-        String token = registerUserAndGetToken("author", "author@test.com");
+        String token = helper.register("author", "author@test.com", "123456").getToken();
 
         String[] nullOrBlanks = new String[] { null, " " };
 
@@ -130,7 +117,7 @@ class ArticleServiceTest {
 
     @Test
     void create_throwsException_whenBodyIsNullOrBlank() {
-        String token = registerUserAndGetToken("author", "author@test.com");
+        String token = helper.register("author", "author@test.com", "123456").getToken();
 
         String[] nullOrBlanks = new String[] { null, " " };
 
@@ -144,10 +131,10 @@ class ArticleServiceTest {
 
     @Test
     void create_withEmptyTagList_returnsArticleWithNoTags() {
-        String token = registerUserAndGetToken("author", "author@test.com");
-
-        ArticleResponse response = articleService.create(token, new CreateArticleRequest(
-                "No Tags Article", "desc", "body", new String[] {}));
+        ArticleResponse response = helper
+                .register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content", new String[] {})
+                .getArticleResponse();
 
         assertEquals(0, response.article().tagList().length);
     }
@@ -188,8 +175,10 @@ class ArticleServiceTest {
 
     @Test
     void list_returnsAllArticles_withoutFilters() {
-        String token = registerUserAndGetToken("author", "author@test.com");
-        createArticle(token);
+        String token = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content",
+                        new String[] { "tag1", "tag2" })
+                .getToken();
 
         List<ArticleResponse> articles = articleService.list(token, null, null, null);
 
@@ -198,22 +187,25 @@ class ArticleServiceTest {
 
     @Test
     void list_filtersByAuthor() {
-        String token1 = registerUserAndGetToken("author1", "author1@test.com");
-        String token2 = registerUserAndGetToken("author2", "author2@test.com");
-        createArticle(token1);
-        createArticle(token2);
+        String token1 = helper.register("author", "author@test.com", "123456")
+                .createArticle("Title 1", "Desc 1", "Content 1", new String[] {})
+                .getToken();
 
-        List<ArticleResponse> articles = articleService.list(token1, "author1", null, null);
+        helper.register("author2", "author2@test.com", "123456")
+                .createArticle("Title 2", "Desc 2", "Content 2", new String[] {});
+
+        List<ArticleResponse> articles = articleService.list(token1, "author", null, null);
 
         assertEquals(1, articles.size());
-        assertEquals("author1", articles.get(0).article().author().username());
+        assertEquals("author", articles.get(0).article().author().username());
     }
 
     @Test
     void list_filtersByTag() {
-        String token = registerUserAndGetToken("author", "author@test.com");
-        articleService.create(token, new CreateArticleRequest("A", "d", "b", new String[] { "java" }));
-        articleService.create(token, new CreateArticleRequest("B", "d", "b", new String[] { "python" }));
+        String token = helper.register("author", "author@test.com", "123456")
+                .createArticle("A", "d", "b", new String[] { "java" })
+                .createArticle("B", "d", "b", new String[] { "spring" })
+                .getToken();
 
         List<ArticleResponse> articles = articleService.list(token, null, "java", null);
 
@@ -221,25 +213,46 @@ class ArticleServiceTest {
     }
 
     @Test
-    @Transactional
     void list_filtersByFavoritedBy() {
-        String authorToken = registerUserAndGetToken("author", "author@test.com");
-        articleService.create(authorToken, new CreateArticleRequest("Favorited Article", "desc", "body", new String[] {}));
-        articleService.create(authorToken, new CreateArticleRequest("Not Favorited", "desc", "body", new String[] {}));
+        helper.register("author", "author@test.com", "123456")
+                .createArticle("Favorited", "desc", "body", new String[] {})
+                .createArticle("Not Favorited", "desc", "body", new String[] {});
 
-        String visitorToken = userServiceHelper.registerUser("visitor", "visitor@test.com", "123456").user().token();
-        Profile visitorProfile = profileRepository.findByUserUsername("visitor").orElseThrow();
-
-        Article toFavorite = articleRepository.findAll().stream()
-                .filter(a -> a.getTitle().equals("Favorited Article"))
-                .findFirst().orElseThrow();
-        toFavorite.addFavorited(visitorProfile);
+        String visitorToken = helper.register("visitor", "visitor@test.com", "123456").getToken();
+        articleService.favorite(visitorToken, "favorited");
 
         List<ArticleResponse> articles = articleService.list(visitorToken, null, null, true);
 
         assertEquals(1, articles.size());
-        assertEquals("Favorited Article", articles.get(0).article().title());
+        assertEquals("Favorited", articles.get(0).article().title());
         assertTrue(articles.get(0).article().favorited());
+    }
+
+    @Test
+    void list_returnsAtMost20Articles_whenMoreThan20Exist() {
+        UserServiceTestHelper userServHelper = helper.register("author", "author@test.com", "123456");
+        String token = userServHelper.getToken();
+
+        for (int i = 1; i <= 21; i++) {
+            userServHelper.createArticle("Article " + i, "desc", "body", new String[] {});
+        }
+
+        List<ArticleResponse> articles = articleService.list(token, null, null, null);
+
+        assertEquals(20, articles.size());
+    }
+
+    @Test
+    void favorite_throwsException_whenSlugIsNullOrBlank() {
+        String token = helper.register("user", "user@test.com", "123456").getToken();
+
+        String[] nullOrBlanks = new String[] { null, " " };
+
+        for (String nullOrBlank : nullOrBlanks) {
+            FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
+                    () -> articleService.favorite(token, nullOrBlank));
+            assertEquals(ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED, exception.getMessagesAsString());
+        }
     }
 
     // Not yet implemented: response should not include body in list

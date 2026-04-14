@@ -43,6 +43,22 @@ public class ArticleService {
         return new ArticleResponse(article, currentUserProfile);
     }
 
+    @Transactional
+    public ArticleResponse favorite(String token, String articleSlug) {
+        Profile currentUserProfile = authService.authenticateProfile(token);
+
+        new Validator()
+                .notNullOrBlank(articleSlug, ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED)
+                .throwViolations(FieldValidationException::new);
+
+        Article article = articleRepository.findBySlug(articleSlug)
+                .orElseThrow(() -> new FieldValidationException(ErrorMessages.ARTICLE_NOT_FOUND));
+
+        article.addFavorited(currentUserProfile);
+
+        return new ArticleResponse(article, currentUserProfile);
+    }
+
     @Transactional(readOnly = true)
     public List<ArticleResponse> list(String token, String author, String tag, Boolean isFavorited) {
         Profile currentUserProfile = authService.authenticateProfile(token);
@@ -54,6 +70,7 @@ public class ArticleService {
                 .filter(article -> tag == null || article.hasTag(tag))
                 .filter(article -> isFavorited == null || article.isFavoritedBy(currentUserProfile))
                 .map(article -> new ArticleResponse(article, currentUserProfile))
+                .limit(20)
                 .toList();
     }
 
