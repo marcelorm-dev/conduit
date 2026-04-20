@@ -51,6 +51,18 @@ public class ArticleService {
 
         Article article = findBySlug(slug);
         article.addFavorited(currentUserProfile);
+        article = articleRepository.save(article);
+
+        return new ArticleResponse(article, currentUserProfile);
+    }
+
+    @Transactional
+    public ArticleResponse unfavorite(String token, String slug) {
+        Profile currentUserProfile = authService.authenticateProfile(token);
+
+        Article article = findBySlug(slug);
+        article.removeFavorited(currentUserProfile);
+        article = articleRepository.save(article);
 
         return new ArticleResponse(article, currentUserProfile);
     }

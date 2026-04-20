@@ -35,9 +35,6 @@ class ArticleServiceTest {
     private ArticleService articleService;
 
     @Autowired
-    private ArticleRepository articleRepository;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -45,7 +42,6 @@ class ArticleServiceTest {
 
     @BeforeEach
     void beforeEachTest() {
-        articleRepository.deleteAll();
         profileRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -236,6 +232,22 @@ class ArticleServiceTest {
     }
 
     @Test
+    void favorite_returnsFavoritedTrue_withFavoritesCountOne_whenArticleIsFavorited() {
+        String slug = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "desc", "body", new String[] {})
+                .getSlug();
+
+        String readerToken = helper.register("reader", "reader@test.com", "123456").getToken();
+        articleService.favorite(readerToken, slug);
+
+        List<ArticleResponse> articles = articleService.list(readerToken, null, null, null);
+
+        assertEquals(1, articles.size());
+        assertTrue(articles.get(0).article().favorited());
+        assertEquals(1, articles.get(0).article().favoritesCount());
+    }
+
+    @Test
     void favorite_throwsException_whenSlugIsNullOrBlank() {
         String token = helper.register("user", "user@test.com", "123456").getToken();
 
@@ -246,6 +258,61 @@ class ArticleServiceTest {
                     () -> articleService.favorite(token, nullOrBlank));
             assertEquals(ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED, exception.getMessagesAsString());
         }
+    }
+
+    @Test
+    void unfavorite_returnsFavoritedFalse_whenPreviouslyFavorited() {
+        String slug = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content", new String[] {})
+                .getSlug();
+
+        String readerToken = helper.register("reader", "reader@test.com", "123456").getToken();
+        articleService.favorite(readerToken, slug);
+
+        ArticleResponse response = articleService.unfavorite(readerToken, slug);
+
+        assertFalse(response.article().favorited());
+        assertEquals(0, response.article().favoritesCount());
+    }
+
+    @Test
+    void unfavorite_throwsException_whenTokenIsNullOrBlank() {
+        String[] nullOrBlanks = new String[] { null, " " };
+
+        for (String nullOrBlank : nullOrBlanks) {
+            AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                    () -> articleService.unfavorite(nullOrBlank, "some-slug"));
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+        }
+    }
+
+    @Test
+    void unfavorite_throwsException_whenTokenIsInvalid() {
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> articleService.unfavorite("invalid-token", "some-slug"));
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+    }
+
+    @Test
+    void unfavorite_throwsException_whenSlugIsNullOrBlank() {
+        String token = helper.register("user", "user@test.com", "123456").getToken();
+
+        String[] nullOrBlanks = new String[] { null, " " };
+
+        for (String nullOrBlank : nullOrBlanks) {
+            FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
+                    () -> articleService.unfavorite(token, nullOrBlank));
+            assertEquals(ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED, exception.getMessagesAsString());
+        }
+    }
+
+    @Test
+    void unfavorite_throwsException_whenSlugNotFound() {
+        String token = helper.register("user", "user@test.com", "123456").getToken();
+
+        ArticleNotFoundException exception = assertThrowsExactly(ArticleNotFoundException.class,
+                () -> articleService.unfavorite(token, "non-existent-slug"));
+        assertEquals(ErrorMessages.ARTICLE_NOT_FOUND, exception.getMessagesAsString());
     }
 
     // Not yet implemented: response should not include body in list

@@ -10,6 +10,7 @@ import com.marcelormdev.conduit_service.profile.Profile;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,6 +19,9 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "articles")
@@ -35,10 +39,15 @@ class Article {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Profile author;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "article_favorites", joinColumns = @JoinColumn(name = "article_id"), inverseJoinColumns = @JoinColumn(name = "profile_id"))
+    @JoinTable(name = "article_favorites",
+            joinColumns = @JoinColumn(name = "article_id"),
+            inverseJoinColumns = @JoinColumn(name = "profile_id",
+                    foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE")))
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Set<Profile> favoritedBy;
 
     Article() {
@@ -117,6 +126,10 @@ class Article {
 
     void addFavorited(Profile profile) {
         this.favoritedBy.add(profile);
+    }
+
+    void removeFavorited(Profile profile) {
+        this.favoritedBy.remove(profile);
     }
 
     Integer getFavoritesCount() {

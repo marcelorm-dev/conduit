@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,12 @@ public class ArticleController {
     public ArticleResponse favorite(@RequestHeader HttpHeaders headers, @PathVariable String slug) {
         String token = new AuthorizationHeader(headers).getToken();
         return articleService.favorite(token, slug);
+    }
+
+    @DeleteMapping("/api/articles/{slug}/favorite")
+    public ArticleResponse unfavorite(@RequestHeader HttpHeaders headers, @PathVariable String slug) {
+        String token = new AuthorizationHeader(headers).getToken();
+        return articleService.unfavorite(token, slug);
     }
 
     // Update Article - PUT /api/articles/:slug

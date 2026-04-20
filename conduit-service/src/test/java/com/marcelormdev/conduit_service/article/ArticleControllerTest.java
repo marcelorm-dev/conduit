@@ -18,15 +18,11 @@ class ArticleControllerTest extends ControllerTest {
     @Autowired
     private ProfileRepository profileRepository;
 
-    @Autowired
-    private ArticleRepository articleRepository;
-
     private UserRestCaller userRestCaller;
     private ArticleRestCaller articleRestCaller;
 
     @BeforeEach
     void beforeEachTest() {
-        articleRepository.deleteAll();
         profileRepository.deleteAll();
         userRepository.deleteAll();
         userRestCaller = new UserRestCaller(restClient);
@@ -170,6 +166,56 @@ class ArticleControllerTest extends ControllerTest {
         String readerToken = authService.generateToken("reader@test.com");
 
         articleRestCaller.callFavoriteArticleAPI("non-existent-slug", readerToken)
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void unfavoriteArticle_returnsArticle_withFavoritedFalse_whenTokenIsValid() {
+        registerUser("author", "author@test.com");
+        String authorToken = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+
+        articleRestCaller.callFavoriteArticleAPI("test-article", readerToken)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.article.slug").isEqualTo("test-article")
+                .jsonPath("$.article.favorited").isEqualTo(true)
+                .jsonPath("$.article.favoritesCount").isEqualTo(1);
+
+        articleRestCaller.callUnfavoriteArticleAPI("test-article", readerToken)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.article.slug").isEqualTo("test-article")
+                .jsonPath("$.article.favorited").isEqualTo(false)
+                .jsonPath("$.article.favoritesCount").isEqualTo(0);
+    }
+
+    @Test
+    void unfavoriteArticle_returns401_whenTokenIsMissing() {
+        articleRestCaller.callUnfavoriteArticleAPI("test-article", null)
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void unfavoriteArticle_returns404_whenSlugNotFound() {
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+
+        articleRestCaller.callUnfavoriteArticleAPI("non-existent-slug", readerToken)
                 .expectStatus().isNotFound();
     }
 
