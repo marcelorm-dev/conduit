@@ -6,21 +6,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.marcelormdev.conduit_service.apitest.ControllerTest;
 import com.marcelormdev.conduit_service.apitest.UserRestCaller;
-import com.marcelormdev.conduit_service.profile.ProfileRepository;
 
 class UserControllerTest extends ControllerTest {
 
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private ProfileRepository profileRepository;
-
     private UserRestCaller restCaller;
 
     @BeforeEach
-    void beforeEachTest() {
-        profileRepository.deleteAll();
+    void beforeEachTest() {        
         userRepository.deleteAll();
         restCaller = new UserRestCaller(restClient);
     }

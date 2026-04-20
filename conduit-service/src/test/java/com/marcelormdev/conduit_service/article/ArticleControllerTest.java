@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.marcelormdev.conduit_service.apitest.ArticleRestCaller;
 import com.marcelormdev.conduit_service.apitest.ControllerTest;
 import com.marcelormdev.conduit_service.apitest.UserRestCaller;
-import com.marcelormdev.conduit_service.profile.ProfileRepository;
 import com.marcelormdev.conduit_service.user.UserRepository;
 
 class ArticleControllerTest extends ControllerTest {
@@ -15,15 +14,11 @@ class ArticleControllerTest extends ControllerTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private ProfileRepository profileRepository;
-
     private UserRestCaller userRestCaller;
     private ArticleRestCaller articleRestCaller;
 
     @BeforeEach
     void beforeEachTest() {
-        profileRepository.deleteAll();
         userRepository.deleteAll();
         userRestCaller = new UserRestCaller(restClient);
         articleRestCaller = new ArticleRestCaller(restClient);

@@ -14,15 +14,11 @@ class ProfileControllerTest extends ControllerTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private ProfileRepository profileRepository;
-
     private UserRestCaller userRestCaller;
     private ProfileRestCaller profileRestCaller;
 
     @BeforeEach
     void beforeEachTest() {
-        profileRepository.deleteAll();
         userRepository.deleteAll();
         userRestCaller = new UserRestCaller(restClient);
         profileRestCaller = new ProfileRestCaller(restClient);

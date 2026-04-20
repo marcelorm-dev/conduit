@@ -22,7 +22,6 @@ import com.marcelormdev.conduit_service.common.exception.FieldValidationExceptio
 import com.marcelormdev.conduit_service.helpers.UserServiceTestHelper;
 import com.marcelormdev.conduit_service.helpers.TestHelper;
 
-import com.marcelormdev.conduit_service.profile.ProfileRepository;
 import com.marcelormdev.conduit_service.user.UserRepository;
 
 @SpringBootTest
@@ -37,12 +36,8 @@ class ArticleServiceTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private ProfileRepository profileRepository;
-
     @BeforeEach
     void beforeEachTest() {
-        profileRepository.deleteAll();
         userRepository.deleteAll();
     }
 

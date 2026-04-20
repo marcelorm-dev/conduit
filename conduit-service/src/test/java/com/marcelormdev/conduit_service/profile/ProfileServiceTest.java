@@ -33,8 +33,7 @@ class ProfileServiceTest {
     private ProfileRepository profileRepository;
 
     @BeforeEach
-    void beforeEachTest() {
-        profileRepository.deleteAll();
+    void beforeEachTest() {        
         userRepository.deleteAll();
     }
 
