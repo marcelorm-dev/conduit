@@ -396,40 +396,48 @@ class ArticleControllerTest extends ControllerTest {
 
     // --- Update Article ---
 
-    // Not yet implemented: PUT /api/articles/:slug
-    //
-    // @Test
-    // void updateArticle_returnsUpdatedArticle_whenTokenIsValid() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // // create an article and capture slug, then:
-    // articleRestCaller.callUpdateArticleAPI(slug, token, """
-    // {
-    // "article": {
-    // "body": "Updated body content"
-    // }
-    // }
-    // """)
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.article.body").isEqualTo("Updated body content")
-    // .jsonPath("$.article.title").isEqualTo("Test Article")
-    // .jsonPath("$.article.tagList").isArray();
-    // }
+    @Test
+    void updateArticle_returnsUpdatedArticle_whenTokenIsValid() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
 
-    // Not yet implemented: PUT /api/articles/:slug
-    //
-    // @Test
-    // void updateArticle_returns401_whenTokenIsMissing() {
-    // articleRestCaller.callUpdateArticleAPI("some-slug", null, """
-    // {
-    // "article": {
-    // "body": "Updated body content"
-    // }
-    // }
-    // """)
-    // .expectStatus().isUnauthorized();
-    // }
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callUpdateArticleAPI("test-article", token, """
+                        {
+                            "article": {
+                                "body": "Updated body content"
+                            }
+                        }
+                """)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.article.body").isEqualTo("Updated body content")
+                .jsonPath("$.article.title").isEqualTo("Test Article")
+                .jsonPath("$.article.tagList").isArray();
+    }
+
+    @Test
+    void updateArticle_returns401_whenTokenIsMissing() {
+        articleRestCaller.callUpdateArticleAPI("some-slug", null, """
+                        {
+                            "article": {
+                                "body": "Updated body content"
+                            }
+                        }
+                """)
+                .expectStatus().isUnauthorized();
+    }
 
     // --- Delete Article ---
 

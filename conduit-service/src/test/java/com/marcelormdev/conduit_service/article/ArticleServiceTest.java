@@ -3,8 +3,9 @@ package com.marcelormdev.conduit_service.article;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -324,80 +325,76 @@ class ArticleServiceTest {
         assertNull(responses.get(0).article().body());
     }
 
-    // --- Update Article ---
+    @Test
+    void update_returnsUpdatedArticle_whenBodyIsChanged() {
+        var articleHelper = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body", new String[] {});
+        String token = articleHelper.getToken();
+        String slug = articleHelper.getSlug();
+        ArticleResponse created = articleService.getBySlug(slug);
 
-    // Not yet implemented: articleService.update(slug, token, request)
-    //
-    // @Test
-    // void update_returnsUpdatedArticle_whenBodyIsChanged() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // String slug = createArticle(token).article().slug();
-    //
-    // ArticleResponse response = articleService.update(slug, token, new
-    // UpdateArticleRequest("Updated body"));
-    //
-    // assertEquals("Updated body", response.article().body());
-    // assertEquals("Test Article", response.article().title());
-    // }
+        ArticleResponse response = articleService.update(token, slug,
+                new UpdateArticleRequest(new UpdateArticleRequest.Params(null, null, "Updated body", null)));
 
-    // Not yet implemented: articleService.update(slug, token, request) — tags
-    // absent means preserved
-    //
-    // @Test
-    // void update_preservesTags_whenTagListIsAbsentFromRequest() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // String slug = createArticle(token).article().slug();
-    //
-    // ArticleResponse response = articleService.update(slug, token,
-    // bodyOnlyRequest("New body"));
-    //
-    // assertEquals(2, response.article().tagList().length);
-    // }
+        assertEquals("Updated body", response.article().body());
+        assertEquals("Test Article", response.article().title());
+        assertNotEquals(created.article().updatedAt(), response.article().updatedAt());
+        assertEquals(created.article().createdAt(), response.article().createdAt());
+    }
 
-    // Not yet implemented: articleService.update(slug, token, request) — empty
-    // array clears tags
-    //
-    // @Test
-    // void update_clearsTags_whenTagListIsEmptyArray() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // String slug = createArticle(token).article().slug();
-    //
-    // ArticleResponse response = articleService.update(slug, token,
-    // emptyTagListRequest());
-    //
-    // assertEquals(0, response.article().tagList().length);
-    // }
+    @Test
+    void update_updatesSlug_whenTitleIsChanged() {
+        var articleHelper = helper.register("author", "author@test.com", "123456")
+                .createArticle("Old Title", "Test description", "Test body", new String[] {});
+        String token = articleHelper.getToken();
+        String slug = articleHelper.getSlug();
 
-    // Not yet implemented: tagList: null should be rejected with 422
-    //
-    // @Test
-    // void update_throwsException_whenTagListIsNull() { ... }
+        ArticleResponse response = articleService.update(token, slug,
+                new UpdateArticleRequest(new UpdateArticleRequest.Params("New Title", null, null, null)));
 
-    // Not yet implemented: updatedAt must change after update
-    //
-    // @Test
-    // void update_changesUpdatedAt_afterUpdate() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // ArticleResponse created = createArticle(token);
-    // Instant originalUpdatedAt = created.article().updatedAt();
-    //
-    // ArticleResponse updated = articleService.update(created.article().slug(),
-    // token, ...);
-    //
-    // assertNotEquals(originalUpdatedAt, updated.article().updatedAt());
-    // }
+        assertEquals("New Title", response.article().title());
+        assertEquals("new-title", response.article().slug());
+    }
 
-    // Not yet implemented: articleService.update — createdAt must be unchanged
-    //
-    // @Test
-    // void update_preservesCreatedAt_afterUpdate() { ... }
+    @Test
+    void update_preservesTags_whenTagListIsAbsentFromRequest() {
+        var articleHelper = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body", new String[] { "tag1", "tag2" });
+        String token = articleHelper.getToken();
+        String slug = articleHelper.getSlug();
 
-    // Not yet implemented: articleService.update — requires valid token
-    //
-    // @Test
-    // void update_throwsException_whenTokenIsInvalid() { ... }
+        ArticleResponse response = articleService.update(token, slug,
+                new UpdateArticleRequest(new UpdateArticleRequest.Params(null, null, "New body", null)));
+        
+        assertEquals(2, response.article().tagList().length);
+        assertEquals("tag1", response.article().tagList()[0]);
+        assertEquals("tag2" , response.article().tagList()[1]);
+    }
 
-    // --- Delete Article ---
+    @Test
+    void update_clearsTags_whenTagListIsEmptyArray() {
+        var articleHelper = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body", new String[] { "tag1", "tag2" });
+        String token = articleHelper.getToken();
+        String slug = articleHelper.getSlug();
+
+        ArticleResponse response = articleService.update(token, slug,
+                new UpdateArticleRequest(new UpdateArticleRequest.Params(null, null, null, new String[] {})));
+
+        assertEquals(0, response.article().tagList().length);
+    }
+
+    @Test
+    void update_throwsException_whenTokenIsInvalid() {
+        var articleHelper = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "desc", "body", new String[] {});
+        String slug = articleHelper.getSlug();
+
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> articleService.update("invalid-token", slug,
+                        new UpdateArticleRequest(new UpdateArticleRequest.Params(null, null, "Updated body", null))));
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+        }    
 
     @Test
     void delete_removesArticle_whenAuthorDeletesOwnArticle() {

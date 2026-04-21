@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,7 +49,12 @@ public class ArticleController {
         return articleService.unfavorite(token, slug);
     }
 
-    // Update Article - PUT /api/articles/:slug
+    @PutMapping("/api/articles/{slug}")
+    public ArticleResponse update(@RequestHeader HttpHeaders headers, @PathVariable String slug,
+            @RequestBody UpdateArticleRequest request) {
+        String token = new AuthorizationHeader(headers).getToken();
+        return articleService.update(token, slug, request);
+    }
 
     @DeleteMapping("/api/articles/{slug}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

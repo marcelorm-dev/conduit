@@ -1,5 +1,6 @@
 package com.marcelormdev.conduit_service.article;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +64,28 @@ public class ArticleService {
 
         Article article = findBySlug(slug);
         article.removeFavorited(currentUserProfile);
+        article = articleRepository.save(article);
+
+        return new ArticleResponse(article, currentUserProfile);
+    }
+
+    @Transactional
+    public ArticleResponse update(String token, String slug, UpdateArticleRequest request) {
+        Profile currentUserProfile = authService.authenticateProfile(token);
+
+        Article article = findBySlug(slug);
+
+        if (!article.isAuthoredBy(currentUserProfile.getUsername())) {
+            throw new ForbiddenException(ErrorMessages.FORBIDDEN_NOT_AUTHOR);
+        }
+
+        article.update(
+            request.article().title(),
+            request.article().description(),
+            request.article().body(),
+            request.article().tagList()
+        );
+        
         article = articleRepository.save(article);
 
         return new ArticleResponse(article, currentUserProfile);

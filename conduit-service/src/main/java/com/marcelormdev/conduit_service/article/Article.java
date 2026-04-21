@@ -82,6 +82,7 @@ class Article {
 
     void setTitle(String title) {
         this.title = title;
+        this.slug = generateSlug(title);
     }
 
     String getDescription() {
@@ -160,6 +161,26 @@ class Article {
         if (!(obj instanceof Article article))
             return false;
         return Objects.equals(this.id, article.id);
+    }
+
+    public void update(String title, String description, String body, String[] tagList) {
+        if (title != null) {
+            setTitle(title);
+        }
+        
+        if (description != null) {
+            setDescription(description);
+        }
+        
+        if (body != null) {
+            setBody(body);
+        }
+        
+        if (tagList != null) {
+            setTags(tagList);
+        }
+
+        setUpdatedAt(Instant.now());
     }
 
 }
