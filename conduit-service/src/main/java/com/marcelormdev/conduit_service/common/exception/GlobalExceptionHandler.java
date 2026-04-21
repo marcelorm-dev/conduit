@@ -44,4 +44,10 @@ public class GlobalExceptionHandler {
         return new ArticleBodyResponse(new ArticleBodyResponse.ArticleErrorsResponse(ex.getMessages()));
     }
 
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ExceptionHandler(ForbiddenException.class)
+    public BodyResponse handleForbiddenException(ForbiddenException ex) {
+        return BodyResponse.of(ex.getMessages());
+    }
+
 }

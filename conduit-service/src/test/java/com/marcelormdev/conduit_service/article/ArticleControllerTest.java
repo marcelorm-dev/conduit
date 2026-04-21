@@ -312,25 +312,67 @@ class ArticleControllerTest extends ControllerTest {
 
     // --- Delete Article ---
 
-    // Not yet implemented: DELETE /api/articles/:slug
-    //
-    // @Test
-    // void deleteArticle_returns204_whenTokenIsValid() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // // create an article and capture slug, then:
-    // articleRestCaller.callDeleteArticleAPI(slug, token)
-    // .expectStatus().isNoContent();
-    // articleRestCaller.callGetArticleAPI(slug)
-    // .expectStatus().isNotFound();
-    // }
+    @Test
+    void deleteArticle_returns204_whenAuthorDeletesOwnArticle() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
 
-    // Not yet implemented: DELETE /api/articles/:slug
-    //
-    // @Test
-    // void deleteArticle_returns401_whenTokenIsMissing() {
-    // articleRestCaller.callDeleteArticleAPI("some-slug", null)
-    // .expectStatus().isUnauthorized();
-    // }
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callDeleteArticleAPI("test-article", token)
+                .expectStatus().isNoContent();
+
+        articleRestCaller.callGetArticleAPI("test-article")
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void deleteArticle_returns401_whenTokenIsMissing() {
+        articleRestCaller.callDeleteArticleAPI("some-slug", null)
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void deleteArticle_returns404_whenSlugNotFound() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
+
+        articleRestCaller.callDeleteArticleAPI("non-existent-slug", token)
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void deleteArticle_returns403_whenUserIsNotAuthor() {
+        registerUser("author", "author@test.com");
+        String authorToken = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("other", "other@test.com");
+        String otherToken = authService.generateToken("other@test.com");
+
+        articleRestCaller.callDeleteArticleAPI("test-article", otherToken)
+                .expectStatus().isForbidden();
+    }
 
 }

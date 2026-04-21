@@ -10,6 +10,7 @@ import com.marcelormdev.conduit_service.auth.AuthService;
 import com.marcelormdev.conduit_service.common.exception.ArticleNotFoundException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.common.exception.ForbiddenException;
 import com.marcelormdev.conduit_service.common.validation.Validator;
 import com.marcelormdev.conduit_service.profile.Profile;
 
@@ -65,6 +66,19 @@ public class ArticleService {
         article = articleRepository.save(article);
 
         return new ArticleResponse(article, currentUserProfile);
+    }
+
+    @Transactional
+    public void delete(String token, String slug) {
+        Profile currentUserProfile = authService.authenticateProfile(token);
+
+        Article article = findBySlug(slug);
+
+        if (!article.isAuthoredBy(currentUserProfile.getUsername())) {
+            throw new ForbiddenException(ErrorMessages.FORBIDDEN_NOT_AUTHOR);
+        }
+
+        articleRepository.delete(article);
     }
 
     private Article findBySlug(String slug) {

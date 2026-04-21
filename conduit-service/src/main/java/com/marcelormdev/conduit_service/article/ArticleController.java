@@ -49,7 +49,12 @@ public class ArticleController {
 
     // Update Article - PUT /api/articles/:slug
 
-    // Delete Article - DELETE /api/articles/:slug
+    @DeleteMapping("/api/articles/{slug}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@RequestHeader HttpHeaders headers, @PathVariable String slug) {
+        String token = new AuthorizationHeader(headers).getToken();
+        articleService.delete(token, slug);
+    }
 
     // Feed Articles - GET /api/articles/feed
 
