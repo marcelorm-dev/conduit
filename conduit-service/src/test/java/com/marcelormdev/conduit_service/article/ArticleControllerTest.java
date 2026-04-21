@@ -216,62 +216,183 @@ class ArticleControllerTest extends ControllerTest {
 
     // --- List Articles ---
 
-    // Not yet implemented: GET /api/articles
-    //
-    // @Test
-    // void listArticles_returnsArticleList_withoutAuth() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // // create an article first, then:
-    // articleRestCaller.callListArticlesAPI()
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.articles").isArray()
-    // .jsonPath("$.articlesCount").isNumber()
-    // .jsonPath("$.articles[0].body").doesNotExist()
-    // .jsonPath("$.articles[0].title").isNotEmpty()
-    // .jsonPath("$.articles[0].slug").isNotEmpty()
-    // .jsonPath("$.articles[0].author.username").isNotEmpty();
-    // }
+    @Test
+    void listArticles_returnsArticleList_withoutAuth() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
 
-    // Not yet implemented: GET /api/articles
-    //
-    // @Test
-    // void listArticles_returnsArticleList_withAuth() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // articleRestCaller.callListArticlesAPI(token)
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.articles").isArray()
-    // .jsonPath("$.articlesCount").isNumber();
-    // }
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": ["tag1", "tag2"]
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
 
-    // Not yet implemented: GET /api/articles?author=
-    //
-    // @Test
-    // void listArticles_filtersByAuthor() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // articleRestCaller.callListArticlesAPI("author=author", null)
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.articlesCount").isNumber()
-    // .jsonPath("$.articles[0].author.username").isEqualTo("author");
-    // }
+        articleRestCaller.callListArticlesAPI()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articles").isArray()
+                .jsonPath("$.articlesCount").isEqualTo(1)
+                .jsonPath("$.articles[0].title").isEqualTo("Test Article")
+                .jsonPath("$.articles[0].slug").isEqualTo("test-article")
+                .jsonPath("$.articles[0].author.username").isEqualTo("author");
+    }
 
-    // Not yet implemented: GET /api/articles?tag=
-    //
-    // @Test
-    // void listArticles_filtersByTag() {
-    // registerUser("author", "author@test.com");
-    // String token = authService.generateToken("author@test.com");
-    // articleRestCaller.callListArticlesAPI("tag=tag1", null)
-    // .expectStatus().isOk()
-    // .expectBody()
-    // .jsonPath("$.articlesCount").isNumber()
-    // .jsonPath("$.articles[0].tagList").isArray();
-    // }
+    @Test
+    void listArticles_returnsEmptyList_whenNoArticlesExist() {
+        articleRestCaller.callListArticlesAPI()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articles").isArray()
+                .jsonPath("$.articlesCount").isEqualTo(0);
+    }
+
+    @Test
+    void listArticles_returnsFavoritedTrue_whenAuthenticatedUserFavoritedArticle() {
+        registerUser("author", "author@test.com");
+        String authorToken = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Test Article",
+                                "description": "Test description",
+                                "body": "Test body content",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+        articleRestCaller.callFavoriteArticleAPI("test-article", readerToken);
+
+        articleRestCaller.callListArticlesAPI(readerToken)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articles[0].favorited").isEqualTo(true)
+                .jsonPath("$.articles[0].favoritesCount").isEqualTo(1);
+    }
+
+    @Test
+    void listArticles_filtersByAuthor() {
+        registerUser("author1", "author1@test.com");
+        String token1 = authService.generateToken("author1@test.com");
+        articleRestCaller.callCreateArticleAPI(token1, """
+                        {
+                            "article": {
+                                "title": "Article by Author 1",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("author2", "author2@test.com");
+        String token2 = authService.generateToken("author2@test.com");
+        articleRestCaller.callCreateArticleAPI(token2, """
+                        {
+                            "article": {
+                                "title": "Article by Author 2",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callListArticlesAPI("author=author1", null)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articlesCount").isEqualTo(1)
+                .jsonPath("$.articles[0].author.username").isEqualTo("author1");
+    }
+
+    @Test
+    void listArticles_filtersByTag() {
+        registerUser("author", "author@test.com");
+        String token = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Java Article",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": ["java"]
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callCreateArticleAPI(token, """
+                        {
+                            "article": {
+                                "title": "Spring Article",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": ["spring"]
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callListArticlesAPI("tag=java", null)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articlesCount").isEqualTo(1)
+                .jsonPath("$.articles[0].title").isEqualTo("Java Article");
+    }
+
+    @Test
+    void listArticles_filtersByFavorited() {
+        registerUser("author", "author@test.com");
+        String authorToken = authService.generateToken("author@test.com");
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Favorited Article",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        articleRestCaller.callCreateArticleAPI(authorToken, """
+                        {
+                            "article": {
+                                "title": "Not Favorited Article",
+                                "description": "desc",
+                                "body": "body",
+                                "tagList": []
+                            }
+                        }
+                """)
+                .expectStatus().isCreated();
+
+        registerUser("reader", "reader@test.com");
+        String readerToken = authService.generateToken("reader@test.com");
+        articleRestCaller.callFavoriteArticleAPI("favorited-article", readerToken);
+
+        articleRestCaller.callListArticlesAPI("favorited=true", readerToken)
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.articlesCount").isEqualTo(1)
+                .jsonPath("$.articles[0].title").isEqualTo("Favorited Article")
+                .jsonPath("$.articles[0].favorited").isEqualTo(true);
+    }
 
     // --- Update Article ---
 

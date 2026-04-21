@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,6 +59,14 @@ public class ArticleController {
 
     // Feed Articles - GET /api/articles/feed
 
-    // List Articles - GET /api/articles
+    @GetMapping("/api/articles")
+    public ArticlesResponse listArticles(
+            @RequestHeader HttpHeaders headers,
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) Boolean favorited) {
+        String token = new AuthorizationHeader(headers).getToken();
+        return new ArticlesResponse(articleService.list(token, author, tag, favorited));
+    }
 
 }

@@ -97,7 +97,9 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResponse> list(String token, String author, String tag, Boolean isFavorited) {
-        Profile currentUserProfile = authService.authenticateProfile(token);
+        Profile currentUserProfile = (token != null && !token.isBlank())
+                ? authService.authenticateProfile(token)
+                : null;
 
         return articleRepository
                 .findAll()
