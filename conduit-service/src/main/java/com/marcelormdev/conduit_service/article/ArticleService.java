@@ -107,7 +107,7 @@ public class ArticleService {
                 .filter(article -> author == null || article.isAuthoredBy(author))
                 .filter(article -> tag == null || article.hasTag(tag))
                 .filter(article -> isFavorited == null || article.isFavoritedBy(currentUserProfile))
-                .map(article -> new ArticleResponse(article, currentUserProfile))
+                .map(article -> new ArticleResponse(article, currentUserProfile, false))
                 .limit(20)
                 .toList();
     }

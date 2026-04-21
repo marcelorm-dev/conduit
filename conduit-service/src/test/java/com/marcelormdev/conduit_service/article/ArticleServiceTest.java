@@ -3,6 +3,7 @@ package com.marcelormdev.conduit_service.article;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
@@ -311,10 +312,17 @@ class ArticleServiceTest {
         assertEquals(ErrorMessages.ARTICLE_NOT_FOUND, exception.getMessagesAsString());
     }
 
-    // Not yet implemented: response should not include body in list
-    //
-    // @Test
-    // void list_doesNotIncludeBodyInResponse() { ... }
+    @Test
+    void list_doesNotIncludeBodyInResponse() {
+        String token = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "Test description", "Test body content", new String[] {})
+                .getToken();
+
+        List<ArticleResponse> responses = articleService.list(token, null, null, null);
+
+        assertEquals(1, responses.size());
+        assertNull(responses.get(0).article().body());
+    }
 
     // --- Update Article ---
 

@@ -11,11 +11,15 @@ public record ArticleResponse(Params article) {
     }
 
     public ArticleResponse(Article article, Profile currentUserProfile) {
+        this(article, currentUserProfile, true);
+    }
+
+    public ArticleResponse(Article article, Profile currentUserProfile, boolean includeBody) {
         this(new Params(
                 article.getSlug(),
                 article.getTitle(),
                 article.getDescription(),
-                article.getBody(),
+                includeBody ? article.getBody() : null,
                 article.getTags(),
                 article.getCreatedAt(),
                 article.getUpdatedAt(),
