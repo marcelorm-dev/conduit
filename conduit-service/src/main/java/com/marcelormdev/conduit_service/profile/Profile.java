@@ -4,10 +4,14 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.marcelormdev.conduit_service.user.User;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,13 +29,15 @@ public class Profile {
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "profile_follows",
-            joinColumns = @JoinColumn(name = "follower_id"),
-            inverseJoinColumns = @JoinColumn(name = "followed_id"))
+    @JoinTable(name = "profile_follows",
+            joinColumns = @JoinColumn(name = "follower_id",
+                    foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (follower_id) REFERENCES profiles(id) ON DELETE CASCADE")),
+            inverseJoinColumns = @JoinColumn(name = "followed_id",
+                    foreignKey = @ForeignKey(foreignKeyDefinition = "FOREIGN KEY (followed_id) REFERENCES profiles(id) ON DELETE CASCADE")))
     private Set<Profile> following = new HashSet<>();
 
     Profile() {
@@ -39,6 +45,10 @@ public class Profile {
 
     public Profile(User user) {
         this.user = user;
+    }
+
+    public User getUser() {
+        return this.user;
     }
 
     public String getUsername() {
