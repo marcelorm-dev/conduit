@@ -19,6 +19,7 @@ import com.marcelormdev.conduit_service.common.exception.ArticleNotFoundExceptio
 import com.marcelormdev.conduit_service.common.exception.AuthenticationException;
 import com.marcelormdev.conduit_service.common.exception.ErrorMessages;
 import com.marcelormdev.conduit_service.common.exception.FieldValidationException;
+import com.marcelormdev.conduit_service.common.exception.ForbiddenException;
 import com.marcelormdev.conduit_service.helpers.UserServiceTestHelper;
 import com.marcelormdev.conduit_service.helpers.TestHelper;
 
@@ -390,37 +391,67 @@ class ArticleServiceTest {
 
     // --- Delete Article ---
 
-    // Not yet implemented: articleService.delete(slug, token)
-    //
-    // @Test
-    // void delete_removesArticle_fromDatabase() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // String slug = createArticle(token).article().slug();
-    //
-    // articleService.delete(slug, token);
-    //
-    // assertEquals(0, articleRepository.count());
-    // }
+    @Test
+    void delete_removesArticle_whenAuthorDeletesOwnArticle() {
+        var authorHelper = helper.register("author", "author@test.com", "123456");
+        String slug = authorHelper.createArticle("Test Article", "desc", "body", new String[] {}).getSlug();
+        String token = authorHelper.getToken();
 
-    // Not yet implemented: articleService.delete(slug, token) — get after delete
-    // throws
-    //
-    // @Test
-    // void delete_throwsException_whenArticleIsRetrievedAfterDeletion() {
-    // String token = registerAndGetToken("author", "author@test.com");
-    // String slug = createArticle(token).article().slug();
-    // articleService.delete(slug, token);
-    //
-    // FieldValidationException exception =
-    // assertThrowsExactly(FieldValidationException.class,
-    // () -> articleService.getBySlug(slug));
-    // assertEquals(ErrorMessages.ARTICLE_NOT_FOUND,
-    // exception.getMessagesAsString());
-    // }
+        articleService.delete(token, slug);
 
-    // Not yet implemented: articleService.delete — requires valid token
-    //
-    // @Test
-    // void delete_throwsException_whenTokenIsInvalid() { ... }
+        assertThrowsExactly(ArticleNotFoundException.class, () -> articleService.getBySlug(slug));
+    }
+
+    @Test
+    void delete_throwsException_whenTokenIsNullOrBlank() {
+        String[] nullOrBlanks = new String[] { null, " " };
+
+        for (String nullOrBlank : nullOrBlanks) {
+            AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                    () -> articleService.delete(nullOrBlank, "some-slug"));
+            assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_NOT_INFORMED, exception.getMessagesAsString());
+        }
+    }
+
+    @Test
+    void delete_throwsException_whenTokenIsInvalid() {
+        AuthenticationException exception = assertThrowsExactly(AuthenticationException.class,
+                () -> articleService.delete("invalid-token", "some-slug"));
+        assertEquals(ErrorMessages.ACCESS_DENIED_TOKEN_INVALID_OR_EXPIRED, exception.getMessagesAsString());
+    }
+
+    @Test
+    void delete_throwsException_whenSlugIsNullOrBlank() {
+        String token = helper.register("author", "author@test.com", "123456").getToken();
+
+        String[] nullOrBlanks = new String[] { null, " " };
+
+        for (String nullOrBlank : nullOrBlanks) {
+            FieldValidationException exception = assertThrowsExactly(FieldValidationException.class,
+                    () -> articleService.delete(token, nullOrBlank));
+            assertEquals(ErrorMessages.ARTICLE_SLUG_MUST_BE_INFORMED, exception.getMessagesAsString());
+        }
+    }
+
+    @Test
+    void delete_throwsException_whenSlugNotFound() {
+        String token = helper.register("author", "author@test.com", "123456").getToken();
+
+        assertThrowsExactly(ArticleNotFoundException.class,
+                () -> articleService.delete(token, "non-existent-slug"));
+    }
+
+    @Test
+    void delete_throwsException_whenUserIsNotAuthor() {
+        String slug = helper.register("author", "author@test.com", "123456")
+                .createArticle("Test Article", "desc", "body", new String[] {})
+                .getSlug();
+
+        String otherToken = helper.register("other", "other@test.com", "123456").getToken();
+
+        ForbiddenException exception = assertThrowsExactly(ForbiddenException.class,
+                () -> articleService.delete(otherToken, slug));
+        assertEquals(ErrorMessages.FORBIDDEN_NOT_AUTHOR, exception.getMessagesAsString());
+    }
 
 }
